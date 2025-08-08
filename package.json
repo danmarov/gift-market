@@ -1,0 +1,25 @@
+{
+  "name": "gift-market",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "bot",
+    "webapp",
+    "database"
+  ],
+  "scripts": {
+    "dev:bot": "npm run dev --workspace=bot",
+    "dev:webapp": "npm run dev --workspace=webapp",
+    "build:all": "npm run build --workspaces",
+    "db:migrate": "npm run db:migrate --workspace=database",
+    "db:studio": "npm run db:studio --workspace=database",
+    "db:generate": "npm run db:generate --workspace=database"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.12.0"
+  }
+}

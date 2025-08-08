@@ -1,0 +1,24 @@
+{
+  "name": "database",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "db:migrate": "dotenv -e ../.env -- prisma migrate dev",
+    "db:generate": "dotenv -e ../.env -- prisma generate",
+    "db:studio": "dotenv -e ../.env -- prisma studio",
+    "db:push": "dotenv -e ../.env -- prisma db push"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.12.0",
+    "dotenv": "^17.2.0",
+    "dotenv-cli": "^8.0.0",
+    "prisma": "^6.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.15",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserOnboardingStatus {
+  NEW              // впервые зашел, показываем онбординг
+  GIFT_REVEALED    // выиграл подарок, но не получил
+  COMPLETED        // получил подарок, онбординг завершен
+}
+
+enum BackdropVariant {
+  YELLOW
+  BLUE
+}
+
+model User {
+  id                String                @id @default(cuid())
+  telegramId        String                @unique
+  username          String?
+  firstName         String?
+  lastName          String?
+  photoUrl          String?
+  balance           Int                   @default(0)
+  lastActivity      DateTime?
+  
+  role              UserRole              @default(USER) 
+  onboardingStatus  UserOnboardingStatus  @default(NEW)
+  
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  // Реферальные связи
+  referralsGiven    Referral[]            @relation("UserReferrals")
+  referredBy        Referral?             @relation("UserReferredBy")
+
+  userTasks         UserTask[]
+  purchases         Purchase[]            @relation("UserPurchases")
+  lootBoxDraws      LootBoxDraw[]         // История розыгрышей
+
+  @@map("users")
+}
+
+model Referral {
+  id            String   @id @default(cuid())
+  referrerId    String   @map("referrer_id")
+  referredId    String   @unique @map("referred_id") // уникальный, т.к. пользователь может быть приглашен только один раз
+  reward        Int      @default(10) // сколько дали за этого реферала
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  // Связи
+  referrer      User     @relation("UserReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred      User     @relation("UserReferredBy", fields: [referredId], references: [id], onDelete: Cascade)
+  
+  @@map("referrals")
+}
+
+model Gift {
+  id                String            @id 
+  telegramGiftId    String            @unique @map("telegram_gift_id")
+  name              String
+  description       String?
+  mediaUrl          String            @map("media_url")
+  price             Int
+  quantity          Int
+  soldCount         Int               @default(0) @map("sold_count")
+  specialOffer      Boolean           @default(false) @map("special_offer")
+  backdropVariant   BackdropVariant   @default(YELLOW) @map("backdrop_variant")
+  tags              String[]          @default([])
+  
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  isDeleted         Boolean           @default(false) @map("is_deleted")
+  deletedAt         DateTime?         @map("deleted_at")
+  purchases         Purchase[]
+  lootBoxPrizes     LootBoxPrize[]    // Подарки доступные в розыгрыше
+
+  @@map("gifts")
+}
+
+enum TaskType {
+  TELEGRAM_SUBSCRIPTION
+  DAILY_BONUS
+}
+
+enum TaskDuration {
+  ONE_DAY    // 1 день - попадает в "Ежедневные"
+  ONE_WEEK   // 7 дней - попадает в "Одноразовые"  
+  ONE_MONTH  // 30 дней - попадает в "Одноразовые"
+}
+
+enum UserTaskStatus {
+  AVAILABLE
+  IN_PROGRESS
+  PENDING_CHECK
+  COMPLETED
+  CLAIMED
+}
+
+model Task {
+  id              String          @id @default(cuid())
+  type            TaskType
+  duration        TaskDuration
+  
+  title           String
+  description     String?
+  reward          Int             // звезды
+  icon            String          // "telegram", "youtube", etc
+  
+  // Данные для выполнения
+  metadata        Json?           // { "channelId": "@channel", "chatId": "-123456" }
+  
+  // Управление
+  isActive        Boolean         @default(true)
+  isVisible       Boolean         @default(true)
+  
+  // Временные рамки - вычисляются автоматически
+  startsAt        DateTime        @default(now()) @map("starts_at")
+  expiresAt       DateTime        @map("expires_at")
+  
+  // Для аналитики
+  completedCount  Int             @default(0) @map("completed_count")
+  maxCompletions  Int?            @map("max_completions") // лимит выполнений
+  
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  
+  // Связи
+  userTasks       UserTask[]
+  
+  @@map("tasks")
+}
+
+model UserTask {
+  userId        String
+  taskId        String
+  status        UserTaskStatus   @default(AVAILABLE)
+  
+  startedAt     DateTime?        @map("started_at")
+  completedAt   DateTime?        @map("completed_at")
+  claimedAt     DateTime?        @map("claimed_at")
+  
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task          Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  @@id([userId, taskId])
+  @@map("user_tasks")
+}
+
+enum PurchaseStatus {
+  PENDING    // Ожидает обработки админом
+  SENT       // Подарок отправлен
+  CANCELLED  // Заказ отменен
+}
+
+model Purchase {
+  id              Int             @id @default(autoincrement())
+  
+  // Связи
+  buyerId         String          @map("buyer_id")
+  buyer           User            @relation("UserPurchases", fields: [buyerId], references: [id], onDelete: Cascade)
+  
+  giftId          String          @map("gift_id")
+  gift            Gift            @relation(fields: [giftId], references: [id], onDelete: Restrict)
+  
+  // Детали заказа
+  quantity        Int             @default(1)
+  totalPrice      Int             @map("total_price")        // в звездах
+  pricePerItem    Int             @map("price_per_item")     // для истории цены
+  
+  // Статус и управление
+  status          PurchaseStatus  @default(PENDING)
+  adminNotes      String?         @map("admin_notes")        // заметки админа
+  
+  // Данные отправки
+  sentAt          DateTime?       @map("sent_at")           // когда отправлен
+  telegramMessageId Int?          @map("telegram_message_id")
+  
+  // Временные метки
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  
+  @@map("purchases")
+}
+
+// === НОВЫЕ МОДЕЛИ ДЛЯ РОЗЫГРЫША ===
+
+// Список доступных подарков для розыгрыша с шансами
+model LootBoxPrize {
+  id              String      @id @default(cuid())
+  giftId          String      @map("gift_id")
+  
+  dropChance      Float       // 0.1 = 10%
+  maxWins         Int?        @map("max_wins")      // лимит выигрышей (опционально)
+  currentWins     Int         @default(0) @map("current_wins")
+  isActive        Boolean     @default(true) @map("is_active")
+  
+  color           String      @default("#FF6B6B") 
+
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  
+  gift            Gift        @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  draws           LootBoxDraw[]
+  
+  @@map("loot_box_prizes")
+}
+
+enum LootBoxDrawStatus {
+  WON           // выиграл, но не забрал
+  CLAIMED       // забрал
+}
+
+// История розыгрышей пользователей
+model LootBoxDraw {
+  id                String              @id @default(cuid())
+  userId            String              @map("user_id")
+  prizeId           String              @map("prize_id")
+  
+  status            LootBoxDrawStatus   @default(WON)
+  
+  wonAt             DateTime            @default(now()) @map("won_at")
+  claimedAt         DateTime?           @map("claimed_at")
+  
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prize             LootBoxPrize        @relation(fields: [prizeId], references: [id], onDelete: Cascade)
+  
+  @@map("loot_box_draws")
+}
+
+// Отдельные задачи только для получения выигранных подарков
+model LootBoxTask {
+  id              String          @id @default(cuid())
+  
+  title           String          // "Подпишись на канал Tech News"
+  description     String?
+  icon            String          @default("telegram")
+  
+  // Данные канала
+  channelId       String          @map("channel_id")      // "@technews"  
+  chatId          String?         @map("chat_id")         // "-1001234567"
+  channelUrl      String          @map("channel_url")     // "https://t.me/technews"
+  
+  // Управление
+  isActive        Boolean         @default(true) @map("is_active")
+  sortOrder       Int             @default(0) @map("sort_order") // порядок отображения
+  
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  
+  @@map("loot_box_tasks")
+}

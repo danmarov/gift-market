@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: telegram_app_db
+    restart: always
+    environment:
+      POSTGRES_USER: telegram_user
+      POSTGRES_PASSWORD: telegram_password
+      POSTGRES_DB: telegram_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://telegram_user:telegram_password@postgres:5432/telegram_app?schema=public
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    restart: always
+
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://telegram_user:telegram_password@postgres:5432/telegram_app?schema=public
+      BOT_TOKEN: ${BOT_TOKEN}
+      NODE_ENV: production
+    restart: always
+
+volumes:
+  postgres_data:

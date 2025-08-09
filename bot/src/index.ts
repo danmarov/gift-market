@@ -1,16 +1,17 @@
 // bot/src/index.ts
 import { config } from "dotenv";
 import { Bot, InlineKeyboard } from "grammy";
-import {
-  createOrUpdateUser,
-  processReferralReward,
-  findUserByTelegramId,
-  updateUserRole,
-} from "database";
+// import {
+//   createOrUpdateUser,
+//   processReferralReward,
+//   findUserByTelegramId,
+//   updateUserRole,
+// } from "database";
+import * as database from "database";
 import path from "path";
 import { NextFunction } from "grammy"; // для типизации, если надо
 
-type User = Awaited<ReturnType<typeof findUserByTelegramId>>;
+type User = Awaited<ReturnType<typeof database.findUserByTelegramId>>;
 
 // Загружаем .env из корня проекта
 config({ path: path.resolve(__dirname, "../../.env") });
@@ -34,7 +35,7 @@ async function ensureUser(ctx: any): Promise<User | null> {
   if (!telegramUser) return null;
 
   try {
-    const user = await createOrUpdateUser({
+    const user = await database.createOrUpdateUser({
       telegramId: telegramUser.id.toString(),
       username: telegramUser.username,
       firstName: telegramUser.first_name,
@@ -70,7 +71,7 @@ async function checkAdmin(ctx: any, next: NextFunction) {
     }
 
     try {
-      const user = await findUserByTelegramId(telegramId);
+      const user = await database.findUserByTelegramId(telegramId);
       if (user?.role === "ADMIN") {
         return next();
       }
@@ -90,7 +91,7 @@ bot.command("start", async (ctx) => {
   const telegramId = ctx.from!.id.toString();
 
   // Проверяем существует ли пользователь
-  const existingUser = await findUserByTelegramId(telegramId);
+  const existingUser = await database.findUserByTelegramId(telegramId);
 
   const firstName = ctx.from?.first_name || "друг";
 
@@ -120,7 +121,7 @@ bot.command("start", async (ctx) => {
     const referrerTelegramId = startPayload.replace("ref_", "");
 
     // Находим реферера по telegramId
-    const referrer = await findUserByTelegramId(referrerTelegramId);
+    const referrer = await database.findUserByTelegramId(referrerTelegramId);
 
     if (referrer && referrer.telegramId !== telegramId) {
       // Создаем нового пользователя
@@ -129,7 +130,7 @@ bot.command("start", async (ctx) => {
       if (newUser) {
         try {
           // Обрабатываем реферальную награду
-          await processReferralReward(referrer.id, newUser.id, 10, 5);
+          await database.processReferralReward(referrer.id, newUser.id, 10, 5);
 
           console.log(
             `✅ Реферальная система сработала: ${referrer.telegramId} -> ${newUser.telegramId}`
@@ -172,14 +173,16 @@ bot.command("add_admin", checkAdmin, async (ctx) => {
   }
 
   try {
-    const userToUpdate = await findUserByTelegramId(newAdminTelegramId);
+    const userToUpdate = await database.findUserByTelegramId(
+      newAdminTelegramId
+    );
 
     if (!userToUpdate) {
       await ctx.reply("Пользователь не найден.");
       return;
     }
 
-    await updateUserRole(newAdminTelegramId, "ADMIN");
+    await database.updateUserRole(newAdminTelegramId, "ADMIN");
 
     await ctx.reply(
       `✅ Пользователь ${newAdminTelegramId} теперь администратор.`
@@ -200,14 +203,16 @@ bot.command("remove_admin", checkAdmin, async (ctx) => {
   }
 
   try {
-    const userToUpdate = await findUserByTelegramId(newAdminTelegramId);
+    const userToUpdate = await database.findUserByTelegramId(
+      newAdminTelegramId
+    );
 
     if (!userToUpdate) {
       await ctx.reply("Пользователь не найден.");
       return;
     }
 
-    await updateUserRole(newAdminTelegramId, "USER");
+    await database.updateUserRole(newAdminTelegramId, "USER");
 
     await ctx.reply(
       `✅ Пользователь ${newAdminTelegramId} больше не администратор.`

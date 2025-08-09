@@ -1,0 +1,10 @@
+node_modules
+.git
+.next
+dist
+build
+*.log
+.DS_Store
+Thumbs.db
+coverage
+.nyc_output

@@ -1,22 +1,69 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Копируем корневые файлы для workspaces
-COPY package*.json ./
-COPY ../bot/package*.json ./../bot/
-COPY ../database/package*.json ./../database/
+# Копируем .env файл
+COPY .env ./
 
-# Копируем весь монорепозиторий (для сборки)
-COPY .. .
+# Копируем database и webapp пакеты
+COPY database ./database/
+COPY webapp ./webapp/
 
-RUN npm ci
-RUN npm run build --workspace=webapp
+# СНАЧАЛА собираем database модуль
+WORKDIR /app/database
+RUN npm install
+RUN npm run build
 
-FROM node:20-alpine AS runner
+# ПОТОМ переходим в папку webapp
+WORKDIR /app/webapp
+RUN npm install
+
+# Rebuild the source code only when needed
+FROM base AS builder
 WORKDIR /app
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/webapp/.next ./webapp/.next
+
+# Копируем все нужные файлы из deps
+COPY --from=deps /app/.env ./
+COPY --from=deps /app/database ./database/
+COPY --from=deps /app/webapp ./webapp/
+
+# Переходим в webapp и собираем
+WORKDIR /app/webapp
+RUN npm run build
+
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+# Отключить телеметрию Next.js
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Копируем .env файл
+COPY --from=builder /app/.env ./
+
+# Копируем database модуль (может понадобиться для runtime)
+COPY --from=builder /app/database ./database/
+
+# Копируем собранное Next.js приложение
 COPY --from=builder /app/webapp/public ./webapp/public
-COPY --from=builder /app/webapp/package.json ./webapp/package.json
+
+# Automatically leverage output traces to reduce image size
+COPY --from=builder --chown=nextjs:nodejs /app/webapp/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/webapp/.next/static ./webapp/.next/static
+
+USER nextjs
+
 EXPOSE 3000
-CMD ["npm", "run", "start", "--workspace=webapp"]
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# server.js создается Next.js в standalone режиме
+CMD ["node", "server.js"]

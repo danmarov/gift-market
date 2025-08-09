@@ -7,7 +7,7 @@ import ProductPreview from "@/components/features/product/product-preview";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useAuth } from "../features/auth/hooks/use-auth";
-import { Gift as IGift } from "@prisma/client";
+import { Gift as IGift } from "database";
 import { Gift } from "lucide-react";
 
 interface ProductData {

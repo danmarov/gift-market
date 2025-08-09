@@ -1,30 +1,26 @@
-
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 WORKDIR /app
 
+# Копируем .env файл
+COPY .env ./
 
-COPY ../package*.json ./
+# Копируем database и bot пакеты  
+COPY database ./database/
+COPY bot ./bot/
 
-COPY ./package*.json ./bot/
-COPY ../database/package*.json ./database/
+# СНАЧАЛА собираем database модуль
+WORKDIR /app/database
+RUN npm install
+RUN npm run build
 
-
-COPY .. .
-
-
-RUN npm ci
-
-
-RUN npm run build --workspace=bot
-
-
-FROM node:20-alpine AS runner
-WORKDIR /app
-
-
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/bot/dist ./bot/dist
-COPY --from=builder /app/bot/package.json ./bot/package.json
-
+# ПОТОМ переходим в папку бота
 WORKDIR /app/bot
-CMD ["npm", "run", "start"]
+
+# Устанавливаем зависимости
+RUN npm install
+
+# Собираем
+RUN npm run build
+
+# Запускаем
+CMD ["npm", "start"]

@@ -34,6 +34,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  output: "standalone",
 };
 
 if (process.env.NODE_ENV === "development") {

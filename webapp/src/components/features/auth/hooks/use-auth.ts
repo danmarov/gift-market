@@ -80,7 +80,17 @@ export function useAuth() {
 
     // Только если есть данные пользователя
     if (authQuery.data && !authQuery.isLoading) {
-      if (authQuery.data.onboardingStatus === "NEW") {
+      const user = authQuery.data;
+
+      // 🚫 ADMIN минует онбординг полностью
+      if (user.role === "ADMIN") {
+        console.log("👑 Admin user detected - skipping onboarding");
+        setIsCheckingOnboarding(false);
+        return;
+      }
+
+      // Обычная проверка онбординга для не-админов
+      if (user.onboardingStatus === "NEW") {
         console.log("🔄 Redirecting to onboarding...");
         setIsCheckingOnboarding(true);
         router.push("/onboarding");
@@ -88,7 +98,12 @@ export function useAuth() {
         setIsCheckingOnboarding(false);
       }
     }
-  }, [authQuery.data?.onboardingStatus, authQuery.isLoading, pathname]); // Убрали router
+  }, [
+    authQuery.data?.onboardingStatus,
+    authQuery.data?.role,
+    authQuery.isLoading,
+    pathname,
+  ]);
 
   // Функции для управления - БЕЗ useCallback чтобы избежать циклов
   const refetchUser = () => authQuery.refetch();

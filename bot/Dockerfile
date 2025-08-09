@@ -22,5 +22,5 @@ RUN npm install
 # Собираем
 RUN npm run build
 
-# Запускаем
-CMD ["npm", "start"]
+# Запускаем с автоматическими миграциями
+CMD ["sh", "-c", "cd ../database && npx prisma migrate deploy && cd ../bot && npm start"]

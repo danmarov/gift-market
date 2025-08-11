@@ -44,7 +44,7 @@ const CreateGiftForm = forwardRef<CreateGiftFormRef, CreateGiftFormProps>(
       defaultValues: {
         name: "",
         description: "",
-        telegram_gift_id: "",
+        telegram_gift_id: undefined,
         media_url: "",
         price: 0,
         quantity: 1000000,
@@ -115,7 +115,7 @@ const CreateGiftForm = forwardRef<CreateGiftFormRef, CreateGiftFormProps>(
                   control={control}
                   render={({ field }) => (
                     <Input
-                      label="Telegram ID *"
+                      label="Telegram ID"
                       placeholder="Введите ID подарка в Telegram"
                       error={errors.telegram_gift_id?.message}
                       {...field}

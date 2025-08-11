@@ -30,7 +30,6 @@ export default function ProductCarouselWithInfo({
   const { user } = useAuth();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-
   const handleSlideChange = (index: number) => {
     if (index !== activeIndex) {
       setIsTransitioning(true);
@@ -51,15 +50,17 @@ export default function ProductCarouselWithInfo({
         {user?.role === "USER" && user.onboardingStatus !== "COMPLETED" && (
           <Link
             href={"/onboarding"}
-            className="menu-btn-accent size-[50px] grid place-items-center cursor-pointer"
+            className="menu-btn-accent block cursor-pointer z-30"
           >
-            <Gift className="text-amber-300 font-medium" />
+            <span className="size-[50px] grid place-items-center">
+              <Gift className="text-amber-300 font-medium" />
+            </span>
           </Link>
         )}
         {user?.role === "ADMIN" && (
           <Link
             href={"/admin/roulette"}
-            className="menu-btn-accent size-[50px] grid place-items-center cursor-pointer"
+            className="menu-btn-accent size-[50px] grid place-items-center cursor-pointer z-30"
           >
             <Gift className="text-amber-300 font-medium" />
           </Link>
@@ -75,7 +76,7 @@ export default function ProductCarouselWithInfo({
         </div>
         <Link
           href={"/shop"}
-          className="ml-auto menu-btn size-[50px] grid place-items-center"
+          className="ml-auto menu-btn size-[50px] grid place-items-center z-30"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

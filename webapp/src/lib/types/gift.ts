@@ -35,7 +35,7 @@ export const createGiftSchema = z.object({
     .min(1, "Название обязательно")
     .max(100, "Максимум 100 символов"),
   description: z.string().optional(),
-  telegram_gift_id: z.string().min(1, "Telegram ID обязателен"),
+  telegram_gift_id: z.string().optional(),
   media_url: z.string().url("Введите корректную ссылку"),
   price: z.number().min(1, "Цена должна быть больше 0"),
   quantity: z.number().min(1, "Количество должно быть больше 0"),
@@ -54,7 +54,7 @@ export const editGiftSchema = z.object({
     .min(1, "Название обязательно")
     .max(100, "Максимум 100 символов"),
   description: z.string().optional(),
-  telegramGiftId: z.string().min(1, "Telegram ID обязателен"), // camelCase
+  telegramGiftId: z.string().optional(), // camelCase
   mediaUrl: z.string().url("Введите корректную ссылку"), // camelCase
   price: z.number().min(1, "Цена должна быть больше 0"),
   quantity: z.number().min(1, "Количество должно быть больше 0"),

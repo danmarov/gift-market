@@ -3,7 +3,7 @@ import { BackdropVariant } from "@prisma/client";
 
 export interface CreateGiftData {
   id: string;
-  telegramGiftId: string;
+  telegramGiftId?: string;
   name: string;
   description?: string;
   mediaUrl: string;
@@ -30,7 +30,7 @@ export async function createGift(data: CreateGiftData) {
   return prisma.gift.create({
     data: {
       id: data.id,
-      telegramGiftId: data.telegramGiftId,
+      telegramGiftId: data.telegramGiftId ?? null,
       name: data.name,
       description: data.description,
       mediaUrl: data.mediaUrl,

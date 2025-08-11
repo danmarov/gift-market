@@ -1,8 +1,12 @@
 // lib/actions/purchases/create-purchase.ts
-import { createPurchase as createPurchaseDb, findGiftById } from "database";
+import {
+  createPurchase as createPurchaseDb,
+  findGiftById,
+  markPurchaseAsSent,
+} from "database";
 import { JWTSession } from "@/lib/types/session";
 import { withServerAuth } from "../auth/with-server-auth";
-import { notifyAdmin } from "../bot";
+import { notifyAdmin, sendGift } from "../bot";
 
 export interface CreatePurchaseParams {
   giftId: string;
@@ -10,7 +14,7 @@ export interface CreatePurchaseParams {
 }
 
 export type CreatePurchaseResult =
-  | { success: true; data: { id: number; message: string } }
+  | { success: true; data: { id: number; message: string; auto: boolean } }
   | { success: false; error: string };
 
 async function _createPurchase(
@@ -45,7 +49,7 @@ async function _createPurchase(
 
     const totalPrice = gift.price * quantity;
 
-    // Создаем покупку через БД
+    // Создаем покупку через БД (пока со статусом PENDING)
     const purchase = await createPurchaseDb({
       buyerId: session.id,
       giftId,
@@ -53,38 +57,141 @@ async function _createPurchase(
       totalPrice,
       pricePerItem: gift.price,
     });
-    await notifyAdmin({
-      message: `
-🎉 <b>Новый заказ!</b>
+
+    console.log("🎁 Purchase created:", {
+      id: purchase.id,
+      hasTelegramGiftId: !!(
+        gift.telegramGiftId && gift.telegramGiftId.trim() !== ""
+      ),
+    });
+
+    // Проверяем, можем ли отправить автоматически
+    if (gift.telegramGiftId && gift.telegramGiftId.trim() !== "") {
+      console.log("🤖 Attempting automatic gift delivery...");
+
+      try {
+        // Пытаемся отправить подарок через Telegram API
+        for (let i = 0; i < quantity; i++) {
+          const giftSent = await sendGift({
+            userId: session.telegramId,
+            giftId: gift.telegramGiftId,
+            text: ``,
+            parseMode: "HTML",
+          });
+
+          if (!giftSent) {
+            throw new Error(`Failed to send gift ${i + 1} of ${quantity}`);
+          }
+        }
+
+        // Если все подарки отправлены успешно, обновляем статус на SENT
+        await markPurchaseAsSent(
+          purchase.id,
+          undefined, // telegramMessageId не нужен для автоматических
+          `Автоматически отправлено ${quantity} подарков через Telegram API`
+        );
+
+        console.log("✅ Automatic gift delivery successful!");
+
+        // Уведомляем админа об успешной автоматической отправке
+        await notifyAdmin({
+          message: `
+✅ <b>Автоматическая отправка успешна!</b>
+
+👤 Пользователь: ${session.telegramId}
+🎁 Подарок: ${gift.name} (x${quantity})
+💰 Стоимость: ${totalPrice}⭐
+🤖 Статус: Автоматически отправлено
+📅 Время: ${new Date().toLocaleString()}
+          `,
+          keyboard: "webapp",
+          webappButtonText: "📈 Открыть историю",
+          webappUrl: `${process.env.WEBAPP_URL}/admin/orders`,
+        });
+
+        return {
+          success: true,
+          data: {
+            id: purchase.id,
+            message: `🎉 Подарок отправлен автоматически! Заказ #${purchase.id}`,
+            auto: true,
+          },
+        };
+      } catch (autoError: any) {
+        console.error("❌ Automatic gift delivery failed:", autoError);
+
+        // Получаем сообщение об ошибке
+        const errorMessage = autoError?.message || "Неизвестная ошибка";
+
+        // Автоматическая отправка не удалась, оставляем в ручном режиме
+        // Уведомляем админа о необходимости ручной отправки
+        await notifyAdmin({
+          message: `
+⚠️ <b>Требуется ручная отправка!</b>
+
+👤 Пользователь: ${session.telegramId}
+🎁 Подарок: ${gift.name} (x${quantity})
+💰 Стоимость: ${totalPrice}⭐
+🤖 Автоматическая отправка не удалась: ${errorMessage}
+📅 Время: ${new Date().toLocaleString()}
+
+❗ Требуется ручная обработка заказа
+          `,
+          keyboard: "webapp",
+          webappButtonText: "📦 Обработать заказ",
+          webappUrl: `${process.env.WEBAPP_URL}/admin/orders`,
+        });
+
+        return {
+          success: true,
+          data: {
+            id: purchase.id,
+            message: `Заказ #${purchase.id} создан! Подарок будет отправлен вручную.`,
+            auto: false,
+          },
+        };
+      }
+    } else {
+      // Это кастомный подарок, требуется ручная отправка
+      console.log("📦 Manual delivery required (no telegramGiftId)");
+
+      await notifyAdmin({
+        message: `
+📦 <b>Новый заказ на ручную отправку!</b>
 
 👤 Пользователь: ${session.telegramId}
 🎁 Подарок: ${gift.name} (x${quantity})
 💰 Стоимость: ${totalPrice}⭐
 📅 Время: ${new Date().toLocaleString()}
-  `,
-      keyboard: "webapp",
-      webappButtonText: "📈 Открыть ордера",
-      webappUrl: `${process.env.WEBAPP_URL}/admin/orders`,
-    });
-    return {
-      success: true,
-      data: {
-        id: purchase.id,
-        message: `Order #${purchase.id} created successfully!`,
-      },
-    };
+
+❗ Требуется ручная обработка
+        `,
+        keyboard: "webapp",
+        webappButtonText: "📦 Обработать заказ",
+        webappUrl: `${process.env.WEBAPP_URL}/admin/orders`,
+      });
+
+      return {
+        success: true,
+        data: {
+          id: purchase.id,
+          message: `Заказ #${purchase.id} создан! Подарок будет отправлен администратором.`,
+          auto: false,
+        },
+      };
+    }
   } catch (error: any) {
     console.error("Error in _createPurchase:", error);
 
     // Обрабатываем специфичные ошибки из БД
     if (error.message === "Gift not found") {
-      return { success: false, error: "Ошибка при покупке подарка" };
+      return { success: false, error: "Подарок не найден" };
     }
     if (error.message === "Insufficient gift quantity") {
-      return { success: false, error: "Ошибка при покупке подарка" };
+      return { success: false, error: "Недостаточно подарков в наличии" };
     }
     if (error.message === "User not found") {
-      return { success: false, error: "Ошибка при покупке подарка" };
+      return { success: false, error: "Пользователь не найден" };
     }
     if (error.message === "Insufficient balance") {
       return { success: false, error: "Недостаточно средств на балансе" };

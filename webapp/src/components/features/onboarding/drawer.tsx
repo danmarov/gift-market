@@ -136,12 +136,6 @@ const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({ trigger }) => {
         hapticFeedback("success");
         router.push("/");
       } else {
-        // let errorMessage = result.error;
-
-        // if (result.missingSubscriptions && result.missingSubscriptions.length > 0) {
-        //   errorMessage = `Подпишитесь на каналы: ${result.missingSubscriptions.join(', ')}`;
-        // }
-
         showToast.error("Подпишитесь на все каналы");
         hapticFeedback("error");
       }
@@ -170,6 +164,8 @@ const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({ trigger }) => {
           paddingLeft: "16px",
           paddingRight: "16px",
           paddingBottom: isMobile ? "29px" : "8px",
+          maxWidth: "512px",
+          margin: "0 auto",
         }}
       >
         <div className="inset-0 relative">
@@ -270,6 +266,7 @@ const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({ trigger }) => {
           <button
             className="subscription-secondary font-mono"
             disabled={isVerifying}
+            onClick={toggleDrawer}
           >
             Закрыть
           </button>

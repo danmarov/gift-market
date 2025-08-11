@@ -33,7 +33,6 @@ export default function GiftPageWrapper({
     startTransition(async () => {
       try {
         const result = await onPurchase(id, quantity);
-
         if (!result.success) {
           throw new Error(result.error);
         }

@@ -2,6 +2,7 @@
 import { PropsWithChildren, useEffect } from "react";
 import { init, viewport } from "@telegram-apps/sdk-react";
 import AuthGuard from "../features/auth/auth-guard";
+import { useDevice } from "../providers/device-provider";
 
 declare global {
   interface Window {
@@ -25,18 +26,30 @@ declare global {
 }
 
 export default function TelegramLayout({ children }: PropsWithChildren) {
+  const isMobile = useDevice();
+
   useEffect(() => {
-    try {
-      init({});
-      viewport.mount().then(() => {
+    const setupTelegram = async () => {
+      try {
+        init({});
+        await viewport.mount();
         if (window.Telegram?.WebApp) {
           window.Telegram.WebApp.disableVerticalSwipes();
         }
-        viewport.requestFullscreen();
-      });
-    } catch (error) {
-      console.warn(error);
-    }
+
+        if (viewport.exitFullscreen.isAvailable()) {
+          if (isMobile) {
+            viewport.requestFullscreen();
+          } else {
+            viewport.exitFullscreen();
+          }
+        }
+      } catch (error) {
+        console.warn("Telegram setup error:", error);
+      }
+    };
+
+    setupTelegram();
   }, []);
 
   return <AuthGuard>{children}</AuthGuard>;

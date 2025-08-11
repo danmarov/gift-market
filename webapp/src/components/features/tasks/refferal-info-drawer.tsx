@@ -69,6 +69,8 @@ const RefferalInfoDrawer: React.FC<RefferalInfoDrawerProps> = ({ trigger }) => {
           paddingLeft: "16px",
           paddingRight: "16px",
           paddingBottom: isMobile ? "29px" : "8px",
+          maxWidth: "512px",
+          margin: "0 auto",
         }}
       >
         <div className="inset-0 relative">
@@ -283,7 +285,10 @@ const RefferalInfoDrawer: React.FC<RefferalInfoDrawerProps> = ({ trigger }) => {
         </button>
 
         <div className="flex items-center gap-2.5 mt-2.5">
-          <button className="subscription-secondary font-mono refferal-drawer-button">
+          <button
+            className="subscription-secondary font-mono refferal-drawer-button"
+            onClick={toggleDrawer}
+          >
             Закрыть
           </button>
           <button

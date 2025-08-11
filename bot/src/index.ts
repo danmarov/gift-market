@@ -56,6 +56,7 @@ async function checkAdmin(ctx: any, next: NextFunction) {
   const chatId = ctx.chat?.id?.toString();
   const telegramUser = ctx.from;
 
+  console.log(telegramUser);
   // Разрешаем если чат — это админ-чат (из .env)
   if (envAdminChatId && chatId === envAdminChatId) {
     return next();
@@ -221,6 +222,75 @@ bot.command("remove_admin", checkAdmin, async (ctx) => {
     console.error(error);
     await ctx.reply("Ошибка при удалении администратора.");
   }
+});
+
+bot.command("invoice", checkAdmin, async (ctx) => {
+  const amount = parseInt(ctx.match?.trim() || "0");
+
+  if (!amount || amount <= 0) {
+    await ctx.reply(
+      "❗ Пожалуйста, укажите корректную сумму звезд.\nПример: /invoice 5000"
+    );
+    return;
+  }
+
+  if (amount > 50000) {
+    await ctx.reply("❗ Максимальная сумма за раз: 50,000 звезд");
+    return;
+  }
+
+  try {
+    await ctx.api.sendInvoice(
+      ctx.chat.id,
+      "Пополнение баланса бота",
+      `Пополните баланс бота на ${amount} звезд`,
+      `bot_refill_${amount}_${Date.now()}`,
+      "XTR",
+      [
+        {
+          label: `${amount} Telegram Stars`,
+          amount: amount,
+        },
+      ]
+    );
+
+    console.log(`💰 Admin ${ctx.from?.id} created invoice for ${amount} stars`);
+  } catch (error) {
+    console.error("Error creating invoice:", error);
+    await ctx.reply("❌ Ошибка при создании инвойса. Попробуйте позже.");
+  }
+});
+
+// Обработчик успешных платежей
+bot.on("message:successful_payment", async (ctx) => {
+  const payment = ctx.message.successful_payment;
+  const amount = payment.total_amount; // Количество звезд
+  const payload = payment.invoice_payload;
+
+  console.log(`✅ Payment received: ${amount} stars, payload: ${payload}`);
+
+  // Здесь можно добавить логику для записи платежа в базу данных
+  // Например, создать запись о пополнении баланса бота
+
+  await ctx.reply(
+    `🎉 Спасибо за поддержку!\n\n` +
+      `Баланс бота пополнен на <b>${amount} ⭐</b>\n` +
+      `ID транзакции: <code>${payment.telegram_payment_charge_id}</code>`,
+    { parse_mode: "HTML" }
+  );
+});
+
+// Обработчик pre_checkout_query (обязательно!)
+bot.on("pre_checkout_query", async (ctx) => {
+  // Здесь можно добавить дополнительные проверки
+  // Например, проверить что товар еще доступен
+
+  console.log(
+    `Pre-checkout query from ${ctx.from?.id} for ${ctx.preCheckoutQuery.total_amount} stars`
+  );
+
+  // Подтверждаем платеж
+  await ctx.answerPreCheckoutQuery(true);
 });
 
 // // 💰 Команда для проверки баланса

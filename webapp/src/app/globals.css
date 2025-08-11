@@ -24,6 +24,14 @@
     --foreground: #ededed;
   }
 } */
+html,
+body {
+  touch-action: pan-x pan-y; /* Разрешает только прокрутку, отключает pinch-to-zoom */
+  overscroll-behavior: none;
+  -webkit-user-select: none; /* Для iOS: предотвращает выбор текста, который может вызывать зум */
+  user-select: none;
+}
+
 * {
   box-sizing: border-box;
 }

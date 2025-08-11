@@ -67,7 +67,7 @@ model Referral {
 
 model Gift {
   id                String            @id 
-  telegramGiftId    String            @unique @map("telegram_gift_id")
+  telegramGiftId    String?           @unique @map("telegram_gift_id")  
   name              String
   description       String?
   mediaUrl          String            @map("media_url")

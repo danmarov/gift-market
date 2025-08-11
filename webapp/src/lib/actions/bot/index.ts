@@ -24,6 +24,163 @@ export interface NotifyAdminOptions {
 
 // ===== ОСНОВНЫЕ ФУНКЦИИ =====
 
+// ===== ТИПЫ ДЛЯ SENDGIFT =====
+
+export interface SendGiftOptions {
+  /** Уникальный идентификатор пользователя для отправки подарка */
+  userId?: string;
+  /** Уникальный идентификатор чата (для каналов) */
+  chatId?: string;
+  /** Уникальный идентификатор подарка */
+  giftId: string;
+  /** Текст сообщения с подарком (опционально) */
+  text?: string;
+  /** Режим парсинга для текста (HTML или Markdown) */
+  parseMode?: "HTML" | "Markdown";
+}
+
+// ===== ФУНКЦИЯ SENDGIFT =====
+
+/**
+ * Отправляет подарок пользователю или каналу
+ * @param options Опции для отправки подарка
+ * @returns Promise<boolean> - true в случае успеха
+ */
+export async function sendGift(options: SendGiftOptions): Promise<boolean> {
+  const token = process.env.BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) {
+    console.error("BOT_TOKEN не задан");
+    return false;
+  }
+
+  // Проверяем, что указан либо userId, либо chatId
+  if (!options.userId && !options.chatId) {
+    console.error("Необходимо указать userId или chatId для отправки подарка");
+    return false;
+  }
+
+  if (!options.giftId) {
+    console.error("giftId обязателен для отправки подарка");
+    return false;
+  }
+
+  console.log("🎁 [BOT] Sending gift:", {
+    userId: options.userId || undefined,
+    chatId: options.chatId || undefined,
+    giftId: options.giftId,
+    hasText: !!options.text,
+    parseMode: options.parseMode,
+  });
+
+  try {
+    const payload: any = {
+      gift_id: options.giftId,
+    };
+
+    // Добавляем получателя
+    if (options.userId) {
+      payload.user_id = options.userId;
+    } else if (options.chatId) {
+      payload.chat_id = options.chatId;
+    }
+
+    // Добавляем опциональные параметры
+    if (options.text) {
+      payload.text = options.text;
+    }
+
+    if (options.parseMode) {
+      payload.text_parse_mode = options.parseMode;
+    }
+
+    const response = await fetch(
+      `https://api.telegram.org/bot${token}/sendGift`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    console.log(
+      "📡 [BOT] sendGift response status:",
+      response.status,
+      response.statusText
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ [BOT] Telegram API HTTP error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+        giftId: options.giftId,
+      });
+      return false;
+    }
+
+    const result = await response.json();
+
+    if (!result.ok) {
+      console.error("❌ [BOT] Telegram API result error:", {
+        error_code: result.error_code,
+        description: result.description,
+        giftId: options.giftId,
+      });
+      return false;
+    }
+
+    console.log("✅ [BOT] Gift sent successfully:", {
+      giftId: options.giftId,
+      recipient: options.userId || options.chatId,
+    });
+
+    return true;
+  } catch (error) {
+    console.error("💥 [BOT] Error sending gift:", error);
+    return false;
+  }
+}
+
+// ===== ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ РАБОТЫ С ПОДАРКАМИ =====
+
+/**
+ * Получает список доступных подарков
+ * @returns Promise<any> - список подарков или null в случае ошибки
+ */
+export async function getAvailableGifts(): Promise<any> {
+  const token = process.env.BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) {
+    console.error("BOT_TOKEN не задан");
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${token}/getAvailableGifts`
+    );
+
+    if (!response.ok) {
+      console.error("Failed to get available gifts:", response.statusText);
+      return null;
+    }
+
+    const result = await response.json();
+
+    if (!result.ok) {
+      console.error("Telegram API error:", result.description);
+      return null;
+    }
+
+    return result.result;
+  } catch (error) {
+    console.error("Error getting available gifts:", error);
+    return null;
+  }
+}
+
 /**
  * Проверяет является ли пользователь участником канала
  */

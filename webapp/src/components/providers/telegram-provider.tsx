@@ -1,4 +1,3 @@
-// components/providers/telegram-provider.tsx
 "use client";
 
 import { useEffect } from "react";
@@ -36,7 +35,21 @@ export default function TelegramProvider({
           window.Telegram.WebApp.ready();
         }
 
-        console.log("✅ Telegram SDK initialized successfully");
+        // Добавляем обработчик для блокировки pinch-to-zoom
+        const preventPinchZoom = (event: TouchEvent) => {
+          // @ts-ignore
+          if (event.scale !== undefined && event.scale !== 1) {
+            event.preventDefault();
+          }
+        };
+
+        document.addEventListener("touchmove", preventPinchZoom, {
+          passive: false,
+        });
+
+        return () => {
+          document.removeEventListener("touchmove", preventPinchZoom);
+        };
       } catch (error) {
         console.warn("⚠️ Error setting up Telegram SDK:", error);
       }
@@ -45,6 +58,5 @@ export default function TelegramProvider({
     initTelegram();
   }, []);
 
-  // Просто возвращаем children без всяких лоадеров
   return <>{children}</>;
 }

@@ -34,9 +34,9 @@ export default async function TasksPage() {
 
   return (
     <MainLayout bottomBar={<NavigationMenu />}>
-      <p className="font-mono text-lg font-medium min-h-[35.5px]">
+      {/* <p className="font-mono text-lg font-medium min-h-[35.5px]">
         Ежедневные задания
-      </p>
+      </p> */}
       <h1 className="uppercase font-sans italic text-4xl font-bold text-center mt-4">
         задания
       </h1>
@@ -62,8 +62,16 @@ export default async function TasksPage() {
         </Link>
       )}
 
-      <RefferalInfoDrawer trigger={<ReferralTaskCard className="my-5" />} />
-
+      <RefferalInfoDrawer trigger={<ReferralTaskCard className="mt-5" />} />
+      <p className="mt-5 font-mono font-medium text-lg">Ежедневные задания</p>
+      <p
+        className="text-sm pt-2.5 pb-1"
+        style={{
+          color: "rgba(255,255,255, 0.8)",
+        }}
+      >
+        💡 Задание истекает по завершению таймера
+      </p>
       <TasksList
         initialData={tasksResult.success ? tasksResult.data : undefined}
         error={tasksResult.error}

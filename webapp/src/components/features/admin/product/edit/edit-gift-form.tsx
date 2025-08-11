@@ -46,7 +46,7 @@ const EditGiftForm = forwardRef<EditGiftFormRef, EditGiftFormProps>(
       defaultValues: {
         name: gift.name || "",
         description: gift.description || "",
-        telegramGiftId: gift.telegramGiftId || "",
+        telegramGiftId: gift.telegramGiftId || undefined,
         mediaUrl: gift.mediaUrl || "",
         price: gift.price || 0,
         quantity: gift.quantity || 0,
@@ -117,7 +117,7 @@ const EditGiftForm = forwardRef<EditGiftFormRef, EditGiftFormProps>(
                   control={control}
                   render={({ field }) => (
                     <Input
-                      label="Telegram ID *"
+                      label="Telegram ID"
                       placeholder="Введите ID подарка в Telegram"
                       error={errors.telegramGiftId?.message}
                       {...field}

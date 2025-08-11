@@ -21,12 +21,6 @@ export default async function OnboardingPage() {
       <OnboardingContent
         onboardingStatus={result.data.onboardingStatus as UserOnboardingStatus}
       />
-      {/* <OnboardingContent
-        role={
-          result.data.onboardingStatus as "NEW" | "GIFT_REVEALED" | "COMPLETED"
-        }
-        initialWonGift={result.data.wonGift.prize.gift}
-      /> */}
     </MainLayout>
   );
 }

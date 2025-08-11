@@ -7,12 +7,14 @@ import { viewport } from "@telegram-apps/sdk-react";
 interface MainLayoutProps extends PropsWithChildren {
   bottomBar?: ReactNode;
   disableBottomPadding?: boolean;
+  classname?: string;
 }
 
 export default function MainLayout({
   children,
   bottomBar,
   disableBottomPadding,
+  classname = "",
 }: MainLayoutProps) {
   const { isMobile } = useDevice();
 
@@ -36,7 +38,8 @@ export default function MainLayout({
           paddingBottom: bottomPadding,
         }}
         className={cn(
-          `flex-1 max-w-lg mx-auto overflow-auto gradient px-4 w-full relative`
+          `flex-1 max-w-lg mx-auto overflow-auto gradient px-4 w-full relative`,
+          classname
         )}
       >
         {children}

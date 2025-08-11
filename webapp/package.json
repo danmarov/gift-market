@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "database": "file:../database",
     "@hookform/resolvers": "^5.1.1",
     "@lottiefiles/lottie-player": "^2.0.12",
     "@sglara/cn": "^1.0.0",
@@ -21,7 +20,9 @@
     "chart.js": "^4.5.0",
     "chartjs-plugin-datalabels": "^2.2.0",
     "class-variance-authority": "^0.7.1",
+    "cloudinary": "^2.7.0",
     "clsx": "^1.2.1",
+    "database": "file:../database",
     "dotenv": "^17.2.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",

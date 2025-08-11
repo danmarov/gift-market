@@ -3,6 +3,7 @@ import { findGift } from "@/lib/actions/gift/find-gift-by-id";
 import { editGift } from "@/lib/actions/admin/edit-gift";
 import { EditGiftFormData } from "@/lib/types/gift";
 import React from "react";
+import { notFound } from "next/navigation";
 
 interface EditGiftPageProps {
   params: Promise<{ id: string }>;
@@ -13,7 +14,7 @@ export default async function EditGiftPage({ params }: EditGiftPageProps) {
   const result = await findGift(id);
 
   if (!result.success) {
-    return <>{result.error}</>;
+    return notFound();
   }
 
   // Server action wrapper

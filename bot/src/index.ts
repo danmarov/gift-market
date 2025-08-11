@@ -94,7 +94,7 @@ bot.command("start", async (ctx) => {
   // Проверяем существует ли пользователь
   const existingUser = await database.findUserByTelegramId(telegramId);
 
-  const firstName = ctx.from?.first_name || "друг";
+  const firstName = ctx.from?.first_name || ctx.from?.username || "друг";
 
   // Функция для отправки сообщения с HTML-разметкой
   const sendWelcomeMessage = async (greeting: string) => {

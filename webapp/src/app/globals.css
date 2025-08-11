@@ -453,7 +453,93 @@ input::-webkit-inner-spin-button {
   display: flex;
   align-items: center;
 }
+.file-upload-label {
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+}
 
+.file-upload-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.file-upload-display {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  color: white;
+  font-size: 14px;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
+}
+
+.file-upload-display.has-error {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.file-upload-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: white;
+}
+
+.file-upload-text.is-placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.file-upload-clear {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  margin-left: 8px;
+  margin-right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.file-upload-clear:hover {
+  color: white;
+}
+
+.file-upload-browse {
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s ease;
+}
+
+.file-upload-browse:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.file-upload-description {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 4px;
+}
+
+.file-upload-error {
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 4px;
+}
 .input-field {
   width: 100%;
   padding: 10px 14px;

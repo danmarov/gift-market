@@ -103,3 +103,4 @@ export * from "./referrals";
 export * from "./tasks";
 export * from "./purchase";
 export * from "./lootbox";
+export * from "./demo-prize";

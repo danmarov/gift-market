@@ -3,7 +3,7 @@ import { useDevice } from "@/components/providers/device-provider";
 import React from "react";
 
 interface ActionButtonProps {
-  onClick: () => void;
+  onClick?: () => void;
   disabled?: boolean;
   isLoading?: boolean;
   children: React.ReactNode;

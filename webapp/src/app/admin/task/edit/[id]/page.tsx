@@ -4,6 +4,7 @@ import { editTask } from "@/lib/actions/admin/edit-task";
 import { findTaskById } from "@/lib/actions/task/find-task-by-id";
 // import { editTaskAction } from "@/lib/actions/admin/edit-task";
 import { EditTaskFormData } from "@/lib/types/task";
+import { notFound } from "next/navigation";
 import React from "react";
 
 interface EditTaskPageProps {
@@ -13,20 +14,12 @@ interface EditTaskPageProps {
 export default async function EditTaskPage({ params }: EditTaskPageProps) {
   const { id } = await params;
 
-  // Теперь findTaskById обернута в withServerAuth, поэтому автоматически получит session
   const result = await findTaskById(id);
 
   if (!result.success) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-white text-center">
-          <h2 className="text-xl font-semibold mb-2">Ошибка</h2>
-          <p className="text-white/70">{result.error}</p>
-        </div>
-      </div>
-    );
+    return notFound();
   }
-  if (result.success && !result.data) return <></>;
+  if (result.success && !result.data) return notFound();
 
   // Server action wrapper
   const handleEditTask = async (data: EditTaskFormData) => {

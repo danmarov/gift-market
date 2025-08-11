@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
     BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     WEBAPP_URL: process.env.WEBAPP_URL,
     ADMIN_TELEGRAM_ID: process.env.ADMIN_TELEGRAM_ID,
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
   },
   images: {
     remotePatterns: [

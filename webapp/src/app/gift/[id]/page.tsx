@@ -2,6 +2,7 @@
 import GiftPageWrapper from "@/components/features/product/gift-page-wrapper";
 import { findGift } from "@/lib/actions/gift/find-gift-by-id";
 import { createPurchase } from "@/lib/actions/purchases/create-purchase";
+import { notFound } from "next/navigation";
 
 interface GiftPageProps {
   params: Promise<{ id: string }>;
@@ -12,7 +13,7 @@ export default async function GiftPage({ params }: GiftPageProps) {
   const result = await findGift(id);
 
   if (!result.success) {
-    return <>{result.error}</>;
+    return notFound();
   }
 
   const handlePurchase = async (giftId: string, quantity: number) => {

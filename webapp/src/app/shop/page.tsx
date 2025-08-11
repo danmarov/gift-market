@@ -31,11 +31,12 @@ export default async function ShopPage() {
         autoplay={false}
         autoplayDelay={4000}
       >
-        {result.data.specialOffers.map((item) => (
-          <CarouselItem key={item.id}>
-            <CatalogCard specialOffer item={item} />
-          </CarouselItem>
-        ))}
+        {result.data.specialOffers.length > 0 &&
+          result.data.specialOffers.map((item) => (
+            <CarouselItem key={item.id}>
+              <CatalogCard specialOffer item={item} />
+            </CarouselItem>
+          ))}
       </Carousel>
       <p className="font-mono text-lg font-medium flex items-center justify-between">
         Все подарки
@@ -56,15 +57,10 @@ export default async function ShopPage() {
           gap: "10px",
         }}
       >
-        {result.data.catalog.map((item) => (
-          // <p key={item.id}>{JSON.stringify(item)}</p>
-          <CatalogCard key={item.id} item={item} />
-        ))}
-        {/* <CatalogCard variant="blue" badges={["nft"]} />
-        <CatalogCard />
-        <CatalogCard />
-        <CatalogCard />
-        <CatalogCard specialOffer={false} /> */}
+        {result.data.catalog.length > 0 &&
+          result.data.catalog.map((item) => (
+            <CatalogCard key={item.id} item={item} />
+          ))}
       </div>
     </MainLayout>
   );

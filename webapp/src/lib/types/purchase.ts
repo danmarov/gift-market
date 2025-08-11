@@ -19,7 +19,7 @@ export interface PurchaseWithDetails {
   gift: {
     name: string;
     mediaUrl: string;
-    telegramGiftId: string;
+    telegramGiftId: string | null;
   };
 }
 

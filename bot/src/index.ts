@@ -94,7 +94,7 @@ bot.command("start", async (ctx) => {
   // Проверяем существует ли пользователь
   const existingUser = await database.findUserByTelegramId(telegramId);
 
-  const firstName = ctx.from?.first_name || ctx.from?.username || "друг";
+  const firstName = ctx.from?.username || ctx.from?.first_name || "друг";
 
   // Функция для отправки сообщения с HTML-разметкой
   const sendWelcomeMessage = async (greeting: string) => {
@@ -131,13 +131,13 @@ bot.command("start", async (ctx) => {
       if (newUser) {
         try {
           // Обрабатываем реферальную награду
-          await database.processReferralReward(referrer.id, newUser.id, 10, 5);
+          await database.processReferralReward(referrer.id, newUser.id, 5, 5);
 
           console.log(
             `✅ Реферальная система сработала: ${referrer.telegramId} -> ${newUser.telegramId}`
           );
 
-          const rewardStars = 10;
+          const rewardStars = 5;
 
           const notificationText = `<b>🎉 Новый реферал!</b>\nВы получили боонус в размере <b>${rewardStars} ⭐</b>.`;
 

@@ -60,7 +60,7 @@ export default function OnboardingContent({
         // Показываем поздравления с небольшой задержкой для красивого перехода
         setTimeout(() => {
           setShowCongrats(true);
-        }, 300);
+        }, 10);
 
         // Ревалидируем только auth данные (без router.refresh!)
         await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });

@@ -44,9 +44,9 @@ export default function CongratsMessage({ gift }: CongratsMessageProps) {
       className="text-center flex flex-col items-center justify-center"
       style={{
         opacity: isVisible ? 1 : 0,
-        transition: "opacity 0.8s ease-out",
+        transition: "opacity 0.3s ease-out",
         transitionProperty: "opacity, transform",
-        transitionDuration: "0.8s",
+        transitionDuration: "0.3s",
         transitionTimingFunction: "ease-out",
       }}
     >

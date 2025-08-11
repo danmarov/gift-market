@@ -1,10 +1,9 @@
 import ShareRefferalButton from "@/components/common/share-refferal-button";
 import NavigationMenu from "@/components/features/navigation/navigation-menu";
 import MainLayout from "@/components/layout/main-layout";
+import HomeHeader from "@/components/widgets/home-header";
 import ProductCarouselWithInfo from "@/components/widgets/product-carousel";
-import UserStarsIndicator from "@/components/widgets/user-stars-indicator";
 import { getGifts } from "@/lib/actions/gift/get-gifts";
-import Link from "next/link";
 
 export default async function Home() {
   const result = await getGifts({ skip: 0, take: 20 });
@@ -16,15 +15,7 @@ export default async function Home() {
       <MainLayout bottomBar={<NavigationMenu />}>
         <>
           <div className="">
-            <div className="flex justify-between items-center">
-              <Link
-                className="menu-btn px-[10px] py-[4.5px] font-medium font-mono"
-                href={"/admin/demo"}
-              >
-                Как играть?
-              </Link>
-              <UserStarsIndicator />
-            </div>
+            <HomeHeader />
             {result.data.specialOffers &&
             result.data.specialOffers.length > 0 ? (
               <ProductCarouselWithInfo products={result.data.specialOffers} />

@@ -9,7 +9,9 @@ export const shareRefferalLink = (telegramId?: string) => {
   }
   try {
     const referralLink = getRefferalLink(telegramId);
-    const shareText = encodeURIComponent(`🎉 Присоединяйся и получай подарки!`);
+    const shareText = encodeURIComponent(
+      `☝️ Этот бот подарил мне бесплатного мишку! Забери подарок тут ⬆️`
+    );
 
     openTelegramLink(
       `https://t.me/share/url?url=${encodeURIComponent(

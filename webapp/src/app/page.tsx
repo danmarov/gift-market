@@ -26,10 +26,7 @@ export default async function Home() {
             {/* <DrawerDemo trigger={<button>CLICK ME</button>} /> */}
 
             <p className="font-sans text-center text-[#E7D3E9] px-2 mt-5">
-              {/* Делитесь с друзьями, выполняйте задания и обменивайте заработанные
-              звезды на подарки */}
-              Получите по 5 ⭐️ за каждого <br />
-              приглашенного друга
+              Отправь бесплатный подарок другу <br /> и получи 5 ⭐️
             </p>
 
             <ShareRefferalButton />

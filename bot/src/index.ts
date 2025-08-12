@@ -1,16 +1,10 @@
 // bot/src/index.ts
 import { config } from "dotenv";
-import { Bot, InlineKeyboard } from "grammy";
-// import {
-//   createOrUpdateUser,
-//   processReferralReward,
-//   findUserByTelegramId,
-//   updateUserRole,
-// } from "database";
+import { Bot, InlineKeyboard, InputFile } from "grammy";
 import * as database from "database";
 import path from "path";
-import { NextFunction } from "grammy"; // для типизации, если надо
-
+import { NextFunction } from "grammy";
+import fs from "fs";
 type User = Awaited<ReturnType<typeof database.findUserByTelegramId>>;
 
 // Загружаем .env из корня проекта
@@ -25,10 +19,12 @@ if (!token) {
 }
 
 const bot = new Bot(token);
-const webappKb = new InlineKeyboard().webApp(
-  "🎮 Открыть приложение",
-  webappUrl
-);
+const channelUrl = "https://t.me/reactorgift"; // Замените на ссылку вашего канала
+
+const webappKb = new InlineKeyboard()
+  .webApp("🎮 Открыть приложение", webappUrl)
+  .row() // Переносим следующую кнопку на новую строку
+  .url("📢 Наш канал", channelUrl);
 // 🚀 Функция создания/обновления пользователя
 async function ensureUser(ctx: any): Promise<User | null> {
   const telegramUser = ctx.from;
@@ -86,6 +82,87 @@ async function checkAdmin(ctx: any, next: NextFunction) {
   // Если не админ и не из админ-чата — не пропускаем, можно не отвечать
   return;
 }
+// Мидлварина для проверки валидности пользователя
+async function validateUser(ctx: any, next: NextFunction) {
+  const telegramUser = ctx.from;
+
+  if (!telegramUser) {
+    // Если нет информации о пользователе - игнорируем
+    return;
+  }
+
+  // Проверяем наличие username
+  if (!telegramUser.username || telegramUser.username.trim() === "") {
+    await ctx.reply(
+      "❗ Для использования бота необходимо установить имя пользователя (username) в настройках Telegram.\n\n" +
+        "📱 Как это сделать:\n" +
+        "1. Откройте настройки Telegram\n" +
+        "2. Нажмите на 'Имя пользователя'\n" +
+        "3. Придумайте и введите уникальное имя\n" +
+        "4. Сохраните изменения\n\n" +
+        "После установки username попробуйте снова! 😊"
+    );
+    return;
+  }
+
+  // Функция для проверки подозрительного контента
+  const containsSuspiciousContent = (text: string | undefined): boolean => {
+    if (!text) return false;
+
+    const suspiciousPatterns = [
+      /t\.me\//i, // t.me/
+      /telegram\.me\//i, // telegram.me/
+      /tg:\/\//i, // tg://
+      /http[s]?:\/\//i, // любые ссылки
+    ];
+
+    return suspiciousPatterns.some((pattern) => pattern.test(text));
+  };
+
+  // Проверяем firstName и lastName на подозрительный контент
+  if (
+    containsSuspiciousContent(telegramUser.first_name) ||
+    containsSuspiciousContent(telegramUser.last_name) ||
+    containsSuspiciousContent(telegramUser.username)
+  ) {
+    // Логируем подозрительного пользователя
+    console.log(
+      `🚫 Suspicious user blocked: ${telegramUser.id} | Username: ${telegramUser.username} | FirstName: ${telegramUser.first_name} | LastName: ${telegramUser.last_name}`
+    );
+
+    // Просто игнорируем - не отвечаем ничего
+    return;
+  }
+
+  // Если все проверки пройдены - продолжаем
+  return next();
+}
+
+// Применяем мидлварину ко всем сообщениям и командам
+bot.use(validateUser);
+
+// Теперь все остальные обработчики будут работать только после прохождения валидации
+
+bot.command("test_photo", checkAdmin, async (ctx) => {
+  const photoPath = path.resolve(__dirname, "../assets/welcome.png");
+
+  if (fs.existsSync(photoPath)) {
+    const photo = new InputFile(photoPath);
+    const sentMessage = await ctx.replyWithPhoto(photo, {
+      caption: "Тест картинки",
+    });
+
+    if (sentMessage.photo && sentMessage.photo.length > 0) {
+      const fileId = sentMessage.photo[sentMessage.photo.length - 1].file_id;
+      await ctx.reply(`File ID: <code>${fileId}</code>`, {
+        parse_mode: "HTML",
+      });
+      console.log("File ID:", fileId);
+    }
+  } else {
+    console.log("No..");
+  }
+});
 
 bot.command("start", async (ctx) => {
   const startPayload = ctx.match;
@@ -96,10 +173,19 @@ bot.command("start", async (ctx) => {
 
   const firstName = ctx.from?.username || ctx.from?.first_name || "друг";
 
-  // Функция для отправки сообщения с HTML-разметкой
+  // File ID картинки приветствия
+  const welcomePhotoFileId =
+    "AgACAgIAAxkDAANqaJuqzB2VB0HhOHBoY8Xwp41IgwkAAmj-MRsQL-FIqARRNgktthABAAMCAAN5AAM2BA";
+
+  // Функция для отправки приветственного сообщения с картинкой
   const sendWelcomeMessage = async (greeting: string) => {
-    const message = `<b>${greeting}, ${firstName}! 🎉</b>\n\nЛови подарки, зарабатывай звёзды и участвуй в розыгрышах`;
-    await ctx.reply(message, { parse_mode: "HTML", reply_markup: webappKb });
+    const message = `<b>${greeting}, ${firstName}! 🎉</b>\n\n🎁 Лови подарки, зарабатывай звёзды и участвуй в розыгрышах`;
+
+    await ctx.replyWithPhoto(welcomePhotoFileId, {
+      caption: message,
+      parse_mode: "HTML",
+      reply_markup: webappKb,
+    });
   };
 
   if (existingUser) {

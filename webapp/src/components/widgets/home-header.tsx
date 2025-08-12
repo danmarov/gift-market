@@ -3,6 +3,7 @@ import Link from "next/link";
 import React from "react";
 import UserStarsIndicator from "./user-stars-indicator";
 import { useAuth } from "../features/auth/hooks/use-auth";
+import { openTelegramLink } from "@telegram-apps/sdk-react";
 
 export default function HomeHeader() {
   const { user } = useAuth();
@@ -16,12 +17,13 @@ export default function HomeHeader() {
           Как играть?
         </Link>
       ) : (
-        <Link
+        <button
           className="menu-btn px-[10px] py-[4.5px] font-medium font-mono"
-          href={"/"}
+          //   href={"/"}
+          onClick={() => openTelegramLink("https://t.me/reactorgift/7")}
         >
           Как играть?
-        </Link>
+        </button>
       )}
       <UserStarsIndicator />
     </div>

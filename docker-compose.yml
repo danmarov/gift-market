@@ -19,7 +19,7 @@ services:
     depends_on:
       - postgres
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       NODE_ENV: ${NODE_ENV}
       BOT_USERNAME: ${BOT_USERNAME}

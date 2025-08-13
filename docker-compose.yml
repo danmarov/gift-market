@@ -26,17 +26,17 @@ services:
       ADMIN_TELEGRAM_ID: ${ADMIN_TELEGRAM_ID}
     restart: always
 
-  prisma-studio:
-    build:
-      context: .
-      dockerfile: ./database/Dockerfile
-    depends_on:
-      - postgres
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-    ports:
-      - "5555:5555"
-    restart: always
+  # prisma-studio:
+  #   build:
+  #     context: .
+  #     dockerfile: ./database/Dockerfile
+  #   depends_on:
+  #     - postgres
+  #   environment:
+  #     DATABASE_URL: ${DATABASE_URL}
+  #   ports:
+  #     - "5555:5555"
+  #   restart: always
 
 volumes:
   postgres_data:

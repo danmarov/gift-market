@@ -44,7 +44,8 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/cli": "^4.1.11",
+    "@tailwindcss/postcss": "^4.1.11",
     "@types/node": "^20.19.9",
     "@types/randomcolor": "^0.5.9",
     "@types/react": "^19",

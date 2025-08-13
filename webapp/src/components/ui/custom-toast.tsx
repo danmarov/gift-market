@@ -1,8 +1,9 @@
 import toast from "react-hot-toast";
 import React from "react";
+import { CheckCircle, AlertTriangle, XCircle, Info } from "lucide-react";
 
 // Типы тостов
-type ToastType = "success" | "warning" | "error";
+type ToastType = "success" | "warning" | "error" | "info";
 
 // Интерфейс для кастомного тоста
 interface CustomToastProps {
@@ -13,54 +14,80 @@ interface CustomToastProps {
 // Компонент кастомного тоста
 const CustomToast: React.FC<CustomToastProps> = ({ type, message }) => {
   const getIcon = () => {
+    const iconProps = { size: 20, strokeWidth: 2.5 };
+
     switch (type) {
       case "success":
-        return "✅";
+        return <CheckCircle {...iconProps} style={{ color: "#FFFFFF" }} />;
       case "warning":
-        return "⚠️";
+        return <AlertTriangle {...iconProps} style={{ color: "#F59E0B" }} />;
       case "error":
-        return "❌";
+        return <XCircle {...iconProps} style={{ color: "#EF4444" }} />;
+      case "info":
+        return <Info {...iconProps} style={{ color: "#3B82F6" }} />;
       default:
-        return "📄";
+        return <Info {...iconProps} style={{ color: "#6B7280" }} />;
     }
   };
 
-  const getGradientStyle = () => {
+  const getBackgroundStyle = () => {
     switch (type) {
       case "success":
         return {
-          background:
-            "linear-gradient(135deg, rgba(0, 255, 127, 0.3), rgba(50, 205, 50, 0.4))",
+          backgroundColor: "#10B981",
+          borderColor: "#059669",
         };
       case "warning":
         return {
-          background:
-            "linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.3))",
+          backgroundColor: "#FEF3C7",
+          borderColor: "#F59E0B",
         };
       case "error":
         return {
-          background:
-            "linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(185, 28, 28, 0.3))",
+          backgroundColor: "#FEE2E2",
+          borderColor: "#EF4444",
+        };
+      case "info":
+        return {
+          backgroundColor: "rgba(59, 130, 246, 0.1)",
+          borderColor: "rgba(59, 130, 246, 0.3)",
         };
       default:
         return {
-          background:
-            "linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(147, 51, 234, 0.3))",
+          backgroundColor: "rgba(107, 114, 128, 0.1)",
+          borderColor: "rgba(107, 114, 128, 0.3)",
         };
+    }
+  };
+
+  const getTextColor = () => {
+    switch (type) {
+      case "success":
+        return { color: "#FFFFFF" };
+      case "warning":
+        return { color: "#92400E" };
+      case "error":
+        return { color: "#991B1B" };
+      case "info":
+        return { color: "#1E40AF" };
+      default:
+        return { color: "#374151" };
     }
   };
 
   return (
     <div
-      className="relative backdrop-blur-md  text-white p-4 rounded-xl shadow-lg min-w-[280px] max-w-[380px]"
+      className="relative p-4 rounded-lg shadow-lg min-w-[280px] max-w-[400px] border"
       style={{
-        ...getGradientStyle(),
-        border: "1px solid rgba(255,255,255,0.2)",
+        ...getBackgroundStyle(),
       }}
     >
-      <div className="flex items-center space-x-3">
-        {/* <span className="text-lg">{getIcon()}</span> */}
-        <span className="font-medium text-sm leading-relaxed ml-1">
+      <div className="flex items-start space-x-3">
+        <div className="flex-shrink-0 mt-0.5">{getIcon()}</div>
+        <span
+          className="font-medium text-sm leading-relaxed flex-1"
+          style={getTextColor()}
+        >
           {message}
         </span>
       </div>
@@ -91,11 +118,18 @@ export const showToast = {
     });
   },
 
+  info: (message: string, duration: number = 4000) => {
+    toast((t) => <CustomToast type="info" message={message} />, {
+      duration,
+      position: "top-center",
+    });
+  },
+
   // Дополнительная функция для полного контроля
   custom: (
     message: string,
     type: ToastType = "success",
-    duration: number = 1500
+    duration: number = 4000
   ) => {
     toast((t) => <CustomToast type={type} message={message} />, {
       duration,

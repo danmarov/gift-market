@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+// import type { NextConfig } from "next";
 import { config } from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 config({ path: path.resolve(__dirname, "../.env") });
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   serverExternalPackages: ["@telegram-apps/init-data-node"],
   env: {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,

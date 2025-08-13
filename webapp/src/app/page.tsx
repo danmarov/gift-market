@@ -4,6 +4,7 @@ import MainLayout from "@/components/layout/main-layout";
 import HomeHeader from "@/components/widgets/home-header";
 import ProductCarouselWithInfo from "@/components/widgets/product-carousel";
 import { getGifts } from "@/lib/actions/gift/get-gifts";
+import Link from "next/link";
 
 export default async function Home() {
   const result = await getGifts({ skip: 0, take: 20 });
@@ -23,7 +24,7 @@ export default async function Home() {
               <></>
             )}
 
-            {/* <DrawerDemo trigger={<button>CLICK ME</button>} /> */}
+            <Link href={"/admin"}>Тосты</Link>
 
             <p className="font-sans text-center text-[#E7D3E9] px-2 mt-5">
               Отправь бесплатный подарок другу <br /> и получи 5 ⭐️

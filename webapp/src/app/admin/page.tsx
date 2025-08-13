@@ -3,6 +3,7 @@ import TelegramBackButton from "@/components/common/telegram-back-button";
 import MainLayout from "@/components/layout/main-layout";
 import Button from "@/components/ui/button";
 import Checkbox from "@/components/ui/checkbox";
+import showToast from "@/components/ui/custom-toast";
 import Input from "@/components/ui/input";
 import MultiSelect from "@/components/ui/multi-select";
 import RadioGroup from "@/components/ui/radio-group";
@@ -81,14 +82,26 @@ export default function Page() {
           </div>
 
           <div className="flex gap-4 flex-wrap flex-col w-fit">
-            <Button variant="primary" size="sm">
-              Маленькая
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => showToast.success("Успешное действие")}
+            >
+              Успех
             </Button>
-            <Button variant="primary" size="md">
-              Средняя
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => showToast.warning("Обратите внимание")}
+            >
+              Варнинг
             </Button>
-            <Button variant="primary" size="lg">
-              Большая
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => showToast.error("Произошла ошибка")}
+            >
+              Ошибка
             </Button>
           </div>
 

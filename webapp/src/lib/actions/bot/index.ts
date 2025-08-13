@@ -274,59 +274,76 @@ export async function isUserMemberOfChannel(
 /**
  * Отправляет уведомление администратору
  */
+function getAdminIds(): string[] {
+  const adminIds = process.env.ADMIN_TELEGRAM_ID;
+  if (!adminIds) return [];
+
+  return adminIds
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+}
 export async function notifyAdmin(
   options: NotifyAdminOptions
 ): Promise<boolean> {
   const token = process.env.BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
-  const adminId = process.env.ADMIN_TELEGRAM_ID;
+  const adminIds = getAdminIds();
 
   if (!token) {
     console.error("BOT_TOKEN не задан");
     return false;
   }
 
-  if (!adminId) {
-    console.error("ADMIN_TELEGRAM_ID не задан");
+  if (adminIds.length === 0) {
+    console.error("ADMIN_TELEGRAM_ID не задан или пуст");
     return false;
   }
 
-  try {
-    const keyboard = createKeyboard(options);
+  const keyboard = createKeyboard(options);
+  let allSuccess = true;
 
-    const payload: any = {
-      chat_id: adminId,
-      text: options.message,
-      parse_mode: options.parseMode || "HTML",
-    };
+  // Отправляем сообщение всем админам
+  for (const adminId of adminIds) {
+    try {
+      const payload: any = {
+        chat_id: adminId,
+        text: options.message,
+        parse_mode: options.parseMode || "HTML",
+      };
 
-    if (keyboard) {
-      payload.reply_markup = keyboard;
-    }
-
-    const response = await fetch(
-      `https://api.telegram.org/bot${token}/sendMessage`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+      if (keyboard) {
+        payload.reply_markup = keyboard;
       }
-    );
 
-    const result = await response.json();
+      const response = await fetch(
+        `https://api.telegram.org/bot${token}/sendMessage`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
-    if (!result.ok) {
-      console.error("Failed to send admin notification:", result);
-      return false;
+      const result = await response.json();
+
+      if (!result.ok) {
+        console.error(
+          `Failed to send notification to admin ${adminId}:`,
+          result
+        );
+        allSuccess = false;
+      } else {
+        console.log(`✅ Notification sent to admin ${adminId}`);
+      }
+    } catch (error) {
+      console.error(`Error sending notification to admin ${adminId}:`, error);
+      allSuccess = false;
     }
-
-    console.log("✅ Admin notification sent successfully");
-    return true;
-  } catch (error) {
-    console.error("Error sending admin notification:", error);
-    return false;
   }
+
+  return allSuccess;
 }
 
 /**

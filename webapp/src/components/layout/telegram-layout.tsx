@@ -37,13 +37,14 @@ export default function TelegramLayout({ children }: PropsWithChildren) {
           window.Telegram.WebApp.disableVerticalSwipes();
         }
 
-        if (viewport.exitFullscreen.isAvailable()) {
-          if (isMobile) {
-            viewport.requestFullscreen();
-          } else {
-            viewport.exitFullscreen();
-          }
-        }
+        viewport.expand();
+        // if (viewport.exitFullscreen.isAvailable()) {
+        //   if (isMobile) {
+        //     viewport.requestFullscreen();
+        //   } else {
+        //     viewport.exitFullscreen();
+        //   }
+        // }
       } catch (error) {
         console.warn("Telegram setup error:", error);
       }

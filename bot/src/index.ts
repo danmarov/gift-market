@@ -47,23 +47,34 @@ async function ensureUser(ctx: any): Promise<User | null> {
   }
 }
 
+function getAdminIds(): string[] {
+  const adminIds = process.env.ADMIN_TELEGRAM_ID;
+  if (!adminIds) return [];
+
+  return adminIds
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+}
+
 async function checkAdmin(ctx: any, next: NextFunction) {
-  const envAdminChatId = process.env.ADMIN_TELEGRAM_ID;
+  const adminIds = getAdminIds();
   const chatId = ctx.chat?.id?.toString();
   const telegramUser = ctx.from;
 
   console.log(telegramUser);
-  // Разрешаем если чат — это админ-чат (из .env)
-  if (envAdminChatId && chatId === envAdminChatId) {
+
+  // Проверяем, является ли чат одним из админских
+  if (adminIds.length > 0 && chatId && adminIds.includes(chatId)) {
     return next();
   }
 
-  // Если юзер есть, проверяем его роль
+  // Если юзер есть, проверяем его ID среди админов
   if (telegramUser) {
     const telegramId = telegramUser.id.toString();
 
-    if (envAdminChatId && telegramId === envAdminChatId) {
-      // Юзер — тот же, что в env (главный админ)
+    // Проверяем, есть ли пользователь среди админов из env
+    if (adminIds.includes(telegramId)) {
       return next();
     }
 
@@ -74,12 +85,11 @@ async function checkAdmin(ctx: any, next: NextFunction) {
       }
     } catch (error) {
       console.error("Ошибка при проверке роли:", error);
-      // Не пускаем дальше при ошибке
       return;
     }
   }
 
-  // Если не админ и не из админ-чата — не пропускаем, можно не отвечать
+  // Если не админ — не пропускаем
   return;
 }
 // Мидлварина для проверки валидности пользователя
@@ -181,8 +191,12 @@ bot.command("start", async (ctx) => {
   const sendWelcomeMessage = async (greeting: string) => {
     const message = `<b>${greeting}, ${firstName}! 🎉</b>\n\n🎁 Лови подарки, зарабатывай звёзды и участвуй в розыгрышах`;
 
-    await ctx.replyWithPhoto(welcomePhotoFileId, {
-      caption: message,
+    // await ctx.replyWithPhoto(welcomePhotoFileId, {
+    //   caption: message,
+    //   parse_mode: "HTML",
+    //   reply_markup: webappKb,
+    // });
+    await ctx.reply(message, {
       parse_mode: "HTML",
       reply_markup: webappKb,
     });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { init, viewport } from "@telegram-apps/sdk-react";
 
 let isInitialized = false;
@@ -10,6 +10,8 @@ export default function TelegramProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const [error, setError] = useState<string>("");
+
   useEffect(() => {
     if (isInitialized) return;
 
@@ -17,12 +19,27 @@ export default function TelegramProvider({
 
     const initTelegram = async () => {
       try {
+        const isTelegramEnv = !!(
+          window.Telegram?.WebApp ||
+          window.location.search.includes("tgWebAppData") ||
+          window.location.hash.includes("tgWebAppData") ||
+          navigator.userAgent.includes("Telegram")
+        );
+
+        if (!isTelegramEnv) {
+          return setError(
+            "Telegram Mini App Error: App must be opened within Telegram"
+          );
+          // throw new Error(
+          //   "Telegram Mini App Error: App must be opened within Telegram"
+          // );
+        }
+
         init();
         isInitialized = true;
 
         try {
           await viewport.mount();
-
           if (viewport.requestFullscreen) {
             viewport.requestFullscreen();
           }
@@ -35,7 +52,6 @@ export default function TelegramProvider({
           window.Telegram.WebApp.ready();
         }
 
-        // Добавляем обработчик для блокировки pinch-to-zoom
         const preventPinchZoom = (event: TouchEvent) => {
           // @ts-ignore
           if (event.scale !== undefined && event.scale !== 1) {
@@ -51,12 +67,18 @@ export default function TelegramProvider({
           document.removeEventListener("touchmove", preventPinchZoom);
         };
       } catch (error) {
-        console.warn("⚠️ Error setting up Telegram SDK:", error);
+        console.error("❌ Telegram initialization failed:", error);
+        setError("Something went wrong..");
       }
     };
 
     initTelegram();
   }, []);
+
+  // Бросаем ошибку если она есть
+  if (error) {
+    throw new Error(error);
+  }
 
   return <>{children}</>;
 }

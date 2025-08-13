@@ -75,7 +75,7 @@ const RefferalInfoDrawer: React.FC<RefferalInfoDrawerProps> = ({ trigger }) => {
       >
         <div className="inset-0 relative">
           <h1 className="subscribtion-title font-mono text-left flex items-center">
-            Зарабатывай по 10
+            Зарабатывай по 5
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="19"

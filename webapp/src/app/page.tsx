@@ -24,8 +24,6 @@ export default async function Home() {
               <></>
             )}
 
-            <Link href={"/admin"}>Тосты</Link>
-
             <p className="font-sans text-center text-[#E7D3E9] px-2 mt-5">
               Отправь бесплатный подарок другу <br /> и получи 5 ⭐️
             </p>

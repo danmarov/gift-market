@@ -39,7 +39,7 @@ export default function ReferralTaskCard({
         <div className="flex items-center gap-3">
           <div className="flex flex-col gap-0.5">
             <span className="font-mono text-sm font-medium text-white">
-              +10 ОЧКОВ ЗА КАЖДОГО ДРУГА
+              +5 ОЧКОВ ЗА КАЖДОГО ДРУГА
             </span>
             <span className="text-sans text-xs text-[#E7D3E9] leading-3">
               Нажмите чтобы поделиться ссылкой

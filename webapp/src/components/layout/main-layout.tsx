@@ -35,6 +35,7 @@ export default function MainLayout({
       <main
         style={{
           // paddingTop: topPadding,
+          paddingTop: "20px",
           paddingBottom: bottomPadding,
         }}
         className={cn(

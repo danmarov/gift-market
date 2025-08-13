@@ -185,21 +185,21 @@ bot.command("start", async (ctx) => {
 
   // File ID картинки приветствия
   const welcomePhotoFileId =
-    "AgACAgIAAxkDAANqaJuqzB2VB0HhOHBoY8Xwp41IgwkAAmj-MRsQL-FIqARRNgktthABAAMCAAN5AAM2BA";
+    "AgACAgIAAxkDAAMGaJu2p3BxlqGvyeup-Mak9t0OIq0AAv77MRvzWtlIB1bgVqWggacBAAMCAAN5AAM2BA";
 
   // Функция для отправки приветственного сообщения с картинкой
   const sendWelcomeMessage = async (greeting: string) => {
     const message = `<b>${greeting}, ${firstName}! 🎉</b>\n\n🎁 Лови подарки, зарабатывай звёзды и участвуй в розыгрышах`;
 
-    // await ctx.replyWithPhoto(welcomePhotoFileId, {
-    //   caption: message,
-    //   parse_mode: "HTML",
-    //   reply_markup: webappKb,
-    // });
-    await ctx.reply(message, {
+    await ctx.replyWithPhoto(welcomePhotoFileId, {
+      caption: message,
       parse_mode: "HTML",
       reply_markup: webappKb,
     });
+    // await ctx.reply(message, {
+    //   parse_mode: "HTML",
+    //   reply_markup: webappKb,
+    // });
   };
 
   if (existingUser) {

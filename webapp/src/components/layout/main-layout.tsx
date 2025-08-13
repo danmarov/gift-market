@@ -34,7 +34,7 @@ export default function MainLayout({
     <div className="h-screen flex flex-col overflow-hidden">
       <main
         style={{
-          paddingTop: topPadding,
+          // paddingTop: topPadding,
           paddingBottom: bottomPadding,
         }}
         className={cn(

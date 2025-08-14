@@ -68,7 +68,7 @@ export default function OnboardingContent({
 
   // Показываем лоадер при загрузке
   if (isLoading) {
-    return <LoadingScreen disableLayout />;
+    return null;
   }
 
   // Если нет данных подарка

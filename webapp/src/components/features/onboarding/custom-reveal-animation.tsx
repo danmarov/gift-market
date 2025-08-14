@@ -44,19 +44,16 @@ export default function CustomRevealAnimation({
   const handleReady = () => {
     console.log("🎬 TGS Player ready");
 
-    // Если skipAnimation - автоматически запускаем анимацию
     if (skipAnimation && playerRef.current) {
       console.log("🚀 Auto-starting animation for GIFT_REVEALED");
       console.log("Player ref:", playerRef.current);
 
-      // Небольшая задержка для уверенности что плеер готов
       setTimeout(() => {
         if (playerRef.current) {
           hapticFeedback("soft");
           playerRef.current.play();
           console.log("✅ Animation started!");
 
-          // Показываем поздравления через время анимации
           setTimeout(() => {
             setIsVisible(true);
             hapticFeedback("success");
@@ -70,30 +67,36 @@ export default function CustomRevealAnimation({
 
   return (
     <div className="text-center flex flex-col items-center justify-center absolute">
-      <h1
-        className="congrats-title font-serif uppercase mb-4 top-0"
-        style={{
-          opacity: isVisible ? 0 : 1,
-          transition: "opacity 0.3s ease-out",
-          position: "absolute",
-        }}
-      >
-        Ваш подарок:
-      </h1>
-      <h1
-        className="congrats-title font-serif uppercase mb-4"
-        style={{
-          opacity: isVisible ? 1 : 0,
-          transition: "opacity 0.3s ease-out",
-        }}
-      >
-        Поздравляем!
-      </h1>
+      {/* Контейнер для анимированной смены заголовков */}
+      <div className="relative mb-2 h-[1.2em] w-full">
+        <h1
+          className="congrats-title font-serif uppercase text-nowrap absolute w-full text-center"
+          style={{
+            opacity: isVisible ? 0 : 1,
+            transition: "all 0.4s ease-out",
+          }}
+        >
+          Ваш подарок:
+        </h1>
+        <h1
+          className="congrats-title font-serif uppercase text-nowrap absolute w-full text-center"
+          style={{
+            opacity: isVisible ? 1 : 0,
+            transition: "all 0.4s ease-out",
+          }}
+        >
+          Поздравляем!
+        </h1>
+      </div>
 
       <div
-        className="size-[255px] relative grid place-items-center my-5"
+        className="relative grid place-items-center mb-2"
         onClick={handleClick}
-        style={{ cursor: hasClicked ? "default" : "pointer" }}
+        style={{
+          cursor: hasClicked ? "default" : "pointer",
+          width: "min(80vw, 320px)",
+          height: "min(80vw, 320px)",
+        }}
       >
         <TGSPlayer
           ref={playerRef}
@@ -102,38 +105,38 @@ export default function CustomRevealAnimation({
           playOnlyOnce={true}
           playOnClick={!hasClicked && !skipAnimation}
           autoplay={false}
-          onReady={handleReady} // Изменил на onReady
+          onReady={handleReady}
           style={{
-            width: 195,
-            height: 195,
+            width: "70%",
+            height: "70%",
           }}
         />
 
         <Image
           src="/Star 3.svg"
           alt=""
-          width={255}
-          height={255}
-          className="absolute"
+          width={320}
+          height={320}
+          className="absolute w-full h-full object-contain"
         />
         <Image
           src="/Star 2.svg"
           alt=""
-          width={255}
-          height={255}
-          className="absolute"
+          width={320}
+          height={320}
+          className="absolute w-full h-full object-contain"
         />
         <Image
           src="/Star 1.svg"
           alt=""
-          width={255}
-          height={255}
-          className="absolute"
+          width={320}
+          height={320}
+          className="absolute w-full h-full object-contain"
         />
       </div>
 
       <p
-        className="font-serif congrats-description max-w-[350px] mb-4"
+        className="font-serif congrats-description  mb-3"
         style={{
           opacity: isVisible ? 1 : 0,
           transition: "opacity 0.3s ease-out",
@@ -143,20 +146,14 @@ export default function CustomRevealAnimation({
         получайте ещё больше подарков!
       </p>
 
-      {isVisible && (
-        // <button
-        //   onClick={() => {
-        //     hapticFeedback("soft");
-        //   }}
-        //   className="w-full primary-btn text-[#6E296D] text-nowrap"
-        //   style={{
-        //     opacity: isVisible ? 1 : 0,
-        //     transition: "opacity 0.3s ease-out",
-        //     pointerEvents: isVisible ? "auto" : "none",
-        //   }}
-        // >
-        //   Забрать подарок
-        // </button>
+      <div
+        style={{
+          opacity: isVisible ? 1 : 0,
+          transition: "opacity 0.3s ease-out",
+          pointerEvents: isVisible ? "auto" : "none",
+        }}
+        className="w-full mt-2"
+      >
         <SubscriptionDrawer
           trigger={
             <button
@@ -164,17 +161,12 @@ export default function CustomRevealAnimation({
                 hapticFeedback("soft");
               }}
               className="w-full primary-btn text-[#6E296D] text-nowrap"
-              style={{
-                opacity: isVisible ? 1 : 0,
-                transition: "opacity 0.3s ease-out",
-                pointerEvents: isVisible ? "auto" : "none",
-              }}
             >
               Забрать подарок
             </button>
           }
         />
-      )}
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import MainLayout from "@/components/layout/main-layout";
 import OnboardingContent from "../../components/features/onboarding/onboarding-content";
 import { getUserOnboardingStatus } from "@/lib/actions/user/get-user-onboarding-status";
 import { UserOnboardingStatus } from "@/lib/types/user";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 export default async function OnboardingPage() {
   const result = await getUserOnboardingStatus();
@@ -14,7 +14,7 @@ export default async function OnboardingPage() {
   }
 
   if ((result.data.onboardingStatus as UserOnboardingStatus) === "COMPLETED") {
-    redirect("/");
+    notFound();
   }
   return (
     <MainLayout disableBottomPadding>

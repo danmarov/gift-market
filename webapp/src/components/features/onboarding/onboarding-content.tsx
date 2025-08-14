@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { AUTH_QUERY_KEY } from "../auth/hooks/use-auth";
+import { useState } from "react";
 import GiftAnimation from "./gift-animation";
 import { UserOnboardingStatus } from "@/lib/types/user";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import CongratsMessage from "./congrats-message";
 import LoadingScreen from "@/components/common/loading-screen";
 import CustomRevealAnimation from "./custom-reveal-animation";
@@ -13,119 +12,66 @@ interface OnboardingContentProps {
   onboardingStatus: UserOnboardingStatus;
 }
 
-interface GiftData {
-  gift: {
-    name: string;
-    mediaUrl: string;
-    revealAnimation?: string | null;
-  };
-}
-
-// Глобальный кеш чтобы избежать повторных загрузок
-const giftCache = new Map<string, GiftData>();
-let isLoading = false;
-
 export default function OnboardingContent({
   onboardingStatus,
 }: OnboardingContentProps) {
-  const queryClient = useQueryClient();
   const [showCongrats, setShowCongrats] = useState(false);
-  const [giftData, setGiftData] = useState<GiftData | null>(null);
-  const [localLoading, setLocalLoading] = useState(true);
-  const hasInitialized = useRef(false);
 
-  useEffect(() => {
-    // Проверяем кеш сначала
-    const cacheKey = `gift-${onboardingStatus}`;
-    const cachedData = giftCache.get(cacheKey);
+  // Простой useQuery для получения данных подарка
+  const { data: giftData, isLoading } = useQuery({
+    queryKey: ["onboarding-gift", onboardingStatus],
+    queryFn: async () => {
+      console.log("🎲 Loading gift data for status:", onboardingStatus);
 
-    if (cachedData) {
-      console.log("🎯 Using cached gift data");
-      setGiftData(cachedData);
-      setLocalLoading(false);
-      hasInitialized.current = true;
-      return;
-    }
+      if (onboardingStatus === "NEW") {
+        const { drawGift } = await import("@/lib/actions/gift/draw-gift");
+        const result = await drawGift();
 
-    // Если уже идет загрузка или компонент уже инициализирован - не загружаем повторно
-    if (isLoading || hasInitialized.current) {
-      return;
-    }
-
-    // Загружаем данные только для нужных статусов
-    if (onboardingStatus !== "NEW" && onboardingStatus !== "GIFT_REVEALED") {
-      setLocalLoading(false);
-      return;
-    }
-
-    isLoading = true;
-    hasInitialized.current = true;
-
-    const loadData = async () => {
-      try {
-        console.log("🎲 Loading gift data for status:", onboardingStatus);
-
-        let result: GiftData | null = null;
-
-        if (onboardingStatus === "NEW") {
-          const { drawGift } = await import("@/lib/actions/gift/draw-gift");
-          const drawResult = await drawGift();
-
-          if (drawResult.success) {
-            console.log("✅ Gift drawn:", drawResult.data);
-
-            result = {
-              gift: {
-                name: drawResult.data.gift.name,
-                mediaUrl: drawResult.data.gift.mediaUrl,
-                revealAnimation:
-                  (drawResult.data.gift as any).revealAnimation || null,
-              },
-            };
-
-            // Ревалидируем auth данные
-            await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
-          }
-        } else if (onboardingStatus === "GIFT_REVEALED") {
-          const { getUserOnboardingGift } = await import(
-            "@/lib/actions/gift/get-user-onboarding-gift"
-          );
-          const giftResult = await getUserOnboardingGift();
-
-          if (giftResult.success) {
-            result = giftResult.data;
-          }
+        if (!result.success) {
+          throw new Error(result.error);
         }
 
-        if (result) {
-          // Кешируем результат
-          giftCache.set(cacheKey, result);
-          setGiftData(result);
-          console.log("💾 Cached gift data for", cacheKey);
-        }
-      } catch (error) {
-        console.error("❌ Error loading gift data:", error);
-      } finally {
-        isLoading = false;
-        setLocalLoading(false);
+        console.log("✅ Gift drawn:", result.data);
+        return {
+          gift: {
+            name: result.data.gift.name,
+            mediaUrl: result.data.gift.mediaUrl,
+            revealAnimation: result.data.gift.revealAnimation || null,
+          },
+        };
       }
-    };
 
-    loadData();
-  }, [onboardingStatus, queryClient]);
+      if (onboardingStatus === "GIFT_REVEALED") {
+        const { getUserOnboardingGift } = await import(
+          "@/lib/actions/gift/get-user-onboarding-gift"
+        );
+        const result = await getUserOnboardingGift();
+
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+
+        return result.data;
+      }
+
+      return null;
+    },
+    enabled: onboardingStatus === "NEW" || onboardingStatus === "GIFT_REVEALED",
+    staleTime: Infinity,
+    retry: 1,
+  });
 
   const handleAnimationComplete = () => {
     console.log("🎬 Animation completed - showing congrats");
     setShowCongrats(true);
   };
 
-  // Показываем лоадер только при реальной загрузке
-  if (localLoading) {
-    return null;
-    // return <LoadingScreen disableLayout />;
+  // Показываем лоадер при загрузке
+  if (isLoading) {
+    return <LoadingScreen disableLayout />;
   }
 
-  // Если нет данных после загрузки
+  // Если нет данных подарка
   if (!giftData?.gift) {
     return (
       <div className="size-full grid place-items-center relative select-none flex-1">
@@ -134,20 +80,14 @@ export default function OnboardingContent({
     );
   }
 
-  console.log("🎨 Showing content for gift:", {
-    name: giftData.gift.name,
-    hasCustomAnimation: !!(giftData.gift as any).revealAnimation,
-    status: onboardingStatus,
-  });
+  const hasCustomAnimation = !!giftData.gift.revealAnimation;
 
-  const hasCustomAnimation = !!(giftData.gift as any).revealAnimation;
-
-  // Если есть кастомная анимация - показываем CustomRevealAnimation
-  if (hasCustomAnimation) {
+  // Кастомная анимация
+  if (hasCustomAnimation && giftData.gift.revealAnimation) {
     return (
       <div className="size-full grid place-items-center relative select-none flex-1">
         <CustomRevealAnimation
-          revealAnimation={(giftData.gift as any).revealAnimation}
+          revealAnimation={giftData.gift.revealAnimation}
           giftName={giftData.gift.name}
           onAnimationComplete={handleAnimationComplete}
           skipAnimation={onboardingStatus === "GIFT_REVEALED"}
@@ -156,7 +96,7 @@ export default function OnboardingContent({
     );
   }
 
-  // Статус NEW без кастомной анимации - обычная анимация
+  // NEW статус - обычная анимация
   if (onboardingStatus === "NEW") {
     return (
       <div className="size-full grid place-items-center relative select-none flex-1">
@@ -174,7 +114,7 @@ export default function OnboardingContent({
     );
   }
 
-  // Статус GIFT_REVEALED без кастомной анимации - обычные поздравления
+  // GIFT_REVEALED статус - просто поздравления
   return (
     <div className="size-full grid place-items-center relative select-none flex-1">
       <CongratsMessage gift={giftData.gift} />

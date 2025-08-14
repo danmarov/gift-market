@@ -6,6 +6,8 @@ import { createGiftSchema, CreateGiftFormData } from "@/lib/types/gift";
 import { z } from "zod";
 import { createGift as createGiftDb } from "database";
 import { uploadToCloudinary, validateCloudinaryConfig } from "../cloudinary";
+import { revalidateTag } from "next/cache";
+import { CACHE_CONSTANTS } from "@/lib/revalidation-keys";
 
 export type CreateGiftResult =
   | { success: true; data: { id: string; message: string } }
@@ -142,14 +144,7 @@ async function _createGift(
     console.log("💾 [SERVER ACTION] Сохранение в базу данных...");
     const createdGift = await createGiftDb(giftData);
 
-    console.log(`🎉 [SERVER ACTION] Подарок успешно создан:`, {
-      id: createdGift.id,
-      telegramGiftId: createdGift.telegramGiftId,
-      name: createdGift.name,
-      price: createdGift.price,
-      hasRevealAnimation: !!createdGift.revealAnimation,
-    });
-
+    revalidateTag(CACHE_CONSTANTS.TAGS.GIFTS);
     return {
       success: true,
       data: {

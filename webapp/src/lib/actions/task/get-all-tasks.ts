@@ -8,6 +8,12 @@ import {
 } from "database";
 import { withServerAuth } from "../auth/with-server-auth";
 import { JWTSession } from "@/lib/types/session";
+import { unstable_cache } from "next/cache";
+import {
+  CACHE_CONSTANTS,
+  createCacheKey,
+  createCacheTag,
+} from "@/lib/revalidation-keys";
 
 async function _getAllTasks(session: JWTSession): Promise<{
   success: boolean;
@@ -71,4 +77,23 @@ async function _getAllTasks(session: JWTSession): Promise<{
   }
 }
 
-export const getAllTasks = withServerAuth(_getAllTasks);
+function createCachedGetAllTasks(userId: string, role: string) {
+  return unstable_cache(
+    (session) => _getAllTasks(session),
+    [createCacheKey.userTasks(userId, role)], // "user-tasks-123-USER" или "user-tasks-456-ADMIN"
+    {
+      revalidate: 180, // 3 минуты (задания меняются чаще чем подарки)
+      tags: [
+        CACHE_CONSTANTS.TAGS.TASKS, // общий тег для всех заданий
+        createCacheTag.userTasks(userId), // "tasks-user-123" - для конкретного пользователя
+      ],
+    }
+  );
+}
+
+export async function getAllTasks() {
+  return withServerAuth((session: JWTSession) => {
+    const cached = createCachedGetAllTasks(session.id, session.role);
+    return cached(session);
+  })();
+}

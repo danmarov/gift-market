@@ -1,6 +1,8 @@
 import { findGifts, Gift } from "database";
 import { withServerAuth } from "../auth/with-server-auth";
 import { JWTSession } from "@/lib/types/session";
+import { unstable_cache } from "next/cache";
+import { CACHE_CONSTANTS } from "@/lib/revalidation-keys";
 
 export type GetGiftsResult =
   | {
@@ -22,6 +24,9 @@ async function _getGifts(
   }
 ): Promise<GetGiftsResult> {
   try {
+    console.log(
+      "🔥 _getGifts called - если видишь это при каждом переходе, значит кеш не работает"
+    );
     const take = options?.take || 20;
     const skip = options?.skip || 0;
 
@@ -58,4 +63,13 @@ async function _getGifts(
   }
 }
 
-export const getGifts = withServerAuth(_getGifts);
+const cachedGetGifts = unstable_cache(
+  _getGifts,
+  [CACHE_CONSTANTS.KEYS.GIFTS_CATALOG], // ключ кеша
+  {
+    revalidate: 300, // 5 минут в секундах
+    tags: [CACHE_CONSTANTS.TAGS.GIFTS], // для сброса кеша
+  }
+);
+
+export const getGifts = withServerAuth(cachedGetGifts);

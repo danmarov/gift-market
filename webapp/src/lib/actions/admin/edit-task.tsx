@@ -3,9 +3,10 @@
 
 import { prisma as db, updateTask } from "database";
 import { EditTaskActionData } from "@/lib/types/task";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { withServerAuth } from "../auth/with-server-auth";
 import { JWTSession } from "@/lib/types/session";
+import { CACHE_CONSTANTS } from "@/lib/revalidation-keys";
 
 export async function _editTaskAction(
   session: JWTSession,
@@ -56,7 +57,7 @@ export async function _editTaskAction(
     // Revalidate кэш
     revalidatePath("/admin/tasks");
     revalidatePath(`/admin/tasks/edit/${data.id}`);
-
+    revalidateTag(CACHE_CONSTANTS.TAGS.TASKS);
     return {
       success: true,
       data: {

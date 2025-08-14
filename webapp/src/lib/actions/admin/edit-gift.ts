@@ -14,6 +14,8 @@ import {
   validateCloudinaryConfig,
   deleteFromCloudinary,
 } from "../cloudinary";
+import { revalidateTag } from "next/cache";
+import { CACHE_CONSTANTS, createCacheTag } from "@/lib/revalidation-keys";
 
 export type EditGiftResult =
   | { success: true; data: Gift }
@@ -189,6 +191,8 @@ async function _editGift(
       hasRevealAnimation: !!updatedGift.revealAnimation,
       animationDeleted: formData.deleteRevealAnimation,
     });
+    revalidateTag(createCacheTag.giftData(formData.id));
+    revalidateTag(CACHE_CONSTANTS.TAGS.GIFTS);
 
     return { success: true, data: updatedGift };
   } catch (error) {

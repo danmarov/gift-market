@@ -2,11 +2,13 @@
 import { deactivateLootBoxTask as deactivateLootBoxTaskDb } from "database";
 import { withServerAuth } from "../auth/with-server-auth";
 import { JWTSession } from "@/lib/types/session";
+import { revalidateTag } from "next/cache";
+import { CACHE_CONSTANTS } from "@/lib/revalidation-keys";
 
 async function _deactivateLootBoxTask(session: JWTSession, taskId: string) {
   try {
     const task = await deactivateLootBoxTaskDb(taskId);
-
+    revalidateTag(CACHE_CONSTANTS.TAGS.LOOTBOX_TASKS);
     return {
       success: true,
       data: task,

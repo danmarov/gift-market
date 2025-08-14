@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 interface TelegramBackButtonProps {
   /** Путь для редиректа если нет истории (по умолчанию "/") */
   fallbackPath?: string;
+  /** Принудительный путь - если указан, всегда редиректит туда, игнорируя историю */
+  forcePath?: string;
   /** Кастомный обработчик клика (переопределяет стандартную логику) */
   onBackClick?: () => void;
   /** Показывать ли кнопку (по умолчанию true) */
@@ -15,6 +17,7 @@ interface TelegramBackButtonProps {
 
 export default function TelegramBackButton({
   fallbackPath = "/",
+  forcePath,
   onBackClick,
   enabled = true,
 }: TelegramBackButtonProps) {
@@ -27,6 +30,12 @@ export default function TelegramBackButton({
       if (onBackClick) {
         // Если передан кастомный обработчик
         onBackClick();
+        return;
+      }
+
+      if (forcePath) {
+        // Если указан forcePath - всегда идем туда, игнорируя историю
+        router.push(forcePath);
         return;
       }
 
@@ -63,7 +72,7 @@ export default function TelegramBackButton({
         console.warn("Failed to cleanup Telegram back button:", error);
       }
     };
-  }, [router, fallbackPath, onBackClick, enabled]);
+  }, [router, fallbackPath, forcePath, onBackClick, enabled]);
 
   // Компонент ничего не рендерит, только управляет кнопкой
   return null;
@@ -72,6 +81,7 @@ export default function TelegramBackButton({
 // Хук для удобного использования
 export function useTelegramBackButton({
   fallbackPath = "/",
+  forcePath,
   onBackClick,
   enabled = true,
 }: TelegramBackButtonProps = {}) {
@@ -83,6 +93,11 @@ export function useTelegramBackButton({
     const handleBackClick = () => {
       if (onBackClick) {
         onBackClick();
+        return;
+      }
+
+      if (forcePath) {
+        router.push(forcePath);
         return;
       }
 
@@ -114,41 +129,5 @@ export function useTelegramBackButton({
         console.warn("Failed to cleanup Telegram back button:", error);
       }
     };
-  }, [router, fallbackPath, onBackClick, enabled]);
+  }, [router, fallbackPath, forcePath, onBackClick, enabled]);
 }
-
-// // Примеры использования:
-
-// // 1. Компонент с настройками по умолчанию
-// export function ExamplePage1() {
-//   return (
-//     <div>
-//       <TelegramBackButton />
-//       <h1>Страница с back button</h1>
-//     </div>
-//   );
-// }
-
-// // 4. Использование хука
-// export function ExamplePage4() {
-//   useTelegramBackButton({
-//     fallbackPath: "/admin",
-//     enabled: true,
-//   });
-
-//   return <h1>Страница использующая хук</h1>;
-// }
-
-// // 5. Условное отображение кнопки
-// export function ExamplePage5() {
-//   const [showBackButton, setShowBackButton] = useState(true);
-
-//   return (
-//     <div>
-//       <TelegramBackButton enabled={showBackButton} />
-//       <button onClick={() => setShowBackButton(!showBackButton)}>
-//         Toggle Back Button
-//       </button>
-//     </div>
-//   );
-// }

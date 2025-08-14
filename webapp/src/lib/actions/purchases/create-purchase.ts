@@ -7,6 +7,8 @@ import {
 import { JWTSession } from "@/lib/types/session";
 import { withServerAuth } from "../auth/with-server-auth";
 import { notifyAdmin, sendGift } from "../bot";
+import { revalidateTag } from "next/cache";
+import { createCacheTag } from "@/lib/revalidation-keys";
 
 export interface CreatePurchaseParams {
   giftId: string;
@@ -171,6 +173,7 @@ async function _createPurchase(
         webappUrl: `${process.env.WEBAPP_URL}/admin/orders`,
       });
 
+      revalidateTag(createCacheTag.giftData(giftId));
       return {
         success: true,
         data: {

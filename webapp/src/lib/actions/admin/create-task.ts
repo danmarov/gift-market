@@ -3,7 +3,8 @@
 
 import { createTask } from "database";
 import { createTaskSchema, CreateTaskFormData } from "@/lib/types/task";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CACHE_CONSTANTS } from "@/lib/revalidation-keys";
 
 export async function createTaskAction(data: CreateTaskFormData) {
   try {
@@ -59,7 +60,7 @@ export async function createTaskAction(data: CreateTaskFormData) {
     // Ревалидируем страницы с заданиями
     // revalidatePath("/tasks");
     // revalidatePath("/admin/tasks");
-
+    revalidateTag(CACHE_CONSTANTS.TAGS.TASKS);
     return {
       success: true,
       data: {
@@ -78,4 +79,7 @@ export async function createTaskAction(data: CreateTaskFormData) {
           : "Произошла ошибка при создании задания",
     };
   }
+}
+function evalidateTag(TASKS: any) {
+  throw new Error("Function not implemented.");
 }

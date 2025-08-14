@@ -8,6 +8,8 @@ import {
 } from "database";
 import { withServerAuth } from "../auth/with-server-auth";
 import { JWTSession } from "@/lib/types/session";
+import { revalidateTag } from "next/cache";
+import { createCacheTag } from "@/lib/revalidation-keys";
 
 async function _startTask(
   session: JWTSession,
@@ -51,7 +53,7 @@ async function _startTask(
     const userTask = await dbStartTask(session.id, taskId);
 
     console.log("✅ [SERVER] Task started successfully");
-
+    revalidateTag(createCacheTag.userTasks(session.id));
     return {
       success: true,
       data: userTask,

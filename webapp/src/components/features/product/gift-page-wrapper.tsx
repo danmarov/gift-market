@@ -62,7 +62,7 @@ export default function GiftPageWrapper({
         />
       }
     >
-      <TelegramBackButton />
+      <TelegramBackButton forcePath="/shop" />
       <GiftPageContent id={id} onQuantityChange={setQuantity} item={item} />
     </MainLayout>
   );

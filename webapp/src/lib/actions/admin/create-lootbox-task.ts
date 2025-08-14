@@ -3,6 +3,8 @@ import { createLootBoxTask as createLootBoxTaskDb } from "database";
 import { withServerAuth } from "../auth/with-server-auth";
 import { JWTSession } from "@/lib/types/session";
 import { CreateLootBoxTaskData } from "@/lib/types/lootbox";
+import { revalidateTag } from "next/cache";
+import { CACHE_CONSTANTS } from "@/lib/revalidation-keys";
 
 async function _createLootBoxTask(
   session: JWTSession,
@@ -19,7 +21,7 @@ async function _createLootBoxTask(
       sortOrder: data.sortOrder || 0,
       isActive: data.isActive ?? true,
     });
-
+    revalidateTag(CACHE_CONSTANTS.TAGS.LOOTBOX_TASKS);
     return {
       success: true,
       data: task,

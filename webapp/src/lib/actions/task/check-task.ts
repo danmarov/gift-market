@@ -5,6 +5,8 @@ import { completeTask as dbCompleteTask, findTaskById } from "database";
 import { withServerAuth } from "../auth/with-server-auth";
 import { JWTSession } from "@/lib/types/session";
 import { isUserMemberOfChannel } from "../bot";
+import { createCacheTag } from "@/lib/revalidation-keys";
+import { revalidateTag } from "next/cache";
 
 type TaskMetadata = {
   chatId: string;
@@ -64,7 +66,7 @@ async function _checkTask(
         console.log(
           "✅ [SERVER] TELEGRAM_SUBSCRIPTION task completed successfully"
         );
-
+        revalidateTag(createCacheTag.userTasks(session.id));
         return {
           success: true,
           completed: true,

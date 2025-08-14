@@ -4,6 +4,8 @@
 import { claimTaskReward as dbClaimTaskReward, findTaskById } from "database";
 import { withServerAuth } from "../auth/with-server-auth";
 import { JWTSession } from "@/lib/types/session";
+import { revalidateTag } from "next/cache";
+import { createCacheTag } from "@/lib/revalidation-keys";
 
 async function _claimReward(
   session: JWTSession,
@@ -36,7 +38,7 @@ async function _claimReward(
     const userTask = await dbClaimTaskReward(session.id, taskId);
 
     console.log("✅ [SERVER] Reward claimed successfully");
-
+    revalidateTag(createCacheTag.userTasks(session.id));
     return {
       success: true,
       data: userTask,

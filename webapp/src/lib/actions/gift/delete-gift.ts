@@ -2,6 +2,8 @@
 import { deleteGift as deleteGiftDb } from "database";
 import { JWTSession } from "@/lib/types/session";
 import { withServerAuth } from "../auth/with-server-auth";
+import { revalidateTag } from "next/cache";
+import { CACHE_CONSTANTS, createCacheTag } from "@/lib/revalidation-keys";
 
 export type SearchGiftsResult =
   | {
@@ -19,7 +21,8 @@ async function _deleteGift(
     }
 
     await deleteGiftDb(id);
-
+    revalidateTag(createCacheTag.giftData(id)); // конкретный подарок
+    revalidateTag(CACHE_CONSTANTS.TAGS.GIFTS); // каталог подарков
     return { success: true };
   } catch (error) {
     console.error("Failed to delete gift", error);

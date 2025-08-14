@@ -22,7 +22,7 @@ const EditTaskForm = forwardRef<EditTaskFormRef, EditTaskFormProps>(
   ({ task, onSubmit, onValidationChange }, ref) => {
     const typeOptions = [
       { value: "TELEGRAM_SUBSCRIPTION", label: "Подписка на Telegram канал" },
-      { value: "DAILY_BONUS", label: "Ежедневный бонус", disabled: true },
+      { value: "FREE_BONUS", label: "Бесплатный бонус", disabled: false },
       {
         value: "TIKTOK_COMMENT",
         label: "Комментарий в Tiktok",
@@ -39,7 +39,7 @@ const EditTaskForm = forwardRef<EditTaskFormRef, EditTaskFormProps>(
     const iconOptions = [
       { value: "telegram", label: "📱 Telegram" },
       { value: "youtube", label: "📺 YouTube" },
-      { value: "instagram", label: "📷 Instagram" },
+      { value: "gift", label: "🎁 Подарок" },
       { value: "twitter", label: "🐦 Twitter" },
       { value: "tiktok", label: "🎵 TikTok" },
     ];

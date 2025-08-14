@@ -17,6 +17,7 @@ import {
   User,
   Settings,
   ChartNoAxesColumnIncreasing,
+  Gift,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -42,6 +43,8 @@ const icons = {
       />
     </svg>
   ),
+  gift: <Gift className="size-[20px]" />,
+
   tiktok: (
     <div className="w-5 h-5 bg-gradient-to-r from-pink-500 to-purple-500 rounded-md"></div>
   ),
@@ -291,6 +294,8 @@ export default function AdminTaskCard({
                   <span className="text-white font-semibold text-sm font-sans leading-tight">
                     {task.type === "TELEGRAM_SUBSCRIPTION"
                       ? "Telegram подписка"
+                      : task.type === "FREE_BONUS"
+                      ? "Беспл.Бонус"
                       : task.type}
                   </span>
                 </div>

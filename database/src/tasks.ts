@@ -212,6 +212,64 @@ export async function startTask(userId: string, taskId: string) {
   });
 }
 
+export async function startAndCompleteTask(userId: string, taskId: string) {
+  return prisma.$transaction(async (tx) => {
+    // Проверяем что задание существует и активно
+    const task = await tx.task.findUnique({
+      where: { id: taskId },
+    });
+    if (!task) {
+      throw new Error("Task not found");
+    }
+    if (!task.isActive || !task.isVisible) {
+      throw new Error("Task is not available");
+    }
+
+    const now = new Date();
+    if (task.expiresAt <= now) {
+      throw new Error("Task has expired");
+    }
+
+    // Проверяем текущий статус пользователя
+    const existingUserTask = await tx.userTask.findUnique({
+      where: { userId_taskId: { userId, taskId } },
+    });
+
+    // Можно начать только если статус AVAILABLE или не существует
+    if (
+      existingUserTask &&
+      existingUserTask.status !== UserTaskStatus.AVAILABLE
+    ) {
+      throw new Error("Task already started or completed");
+    }
+
+    // 🔥 Сразу создаем задачу в статусе COMPLETED
+    const userTask = await tx.userTask.upsert({
+      where: { userId_taskId: { userId, taskId } },
+      create: {
+        userId,
+        taskId,
+        status: UserTaskStatus.COMPLETED, // 🔥 Сразу COMPLETED
+        startedAt: now,
+        completedAt: now, // 🔥 Сразу завершаем
+      },
+      update: {
+        status: UserTaskStatus.COMPLETED,
+        startedAt: now,
+        completedAt: now,
+      },
+    });
+
+    // Увеличиваем счетчик выполнений
+    await tx.task.update({
+      where: { id: taskId },
+      data: { completedCount: { increment: 1 } },
+    });
+
+    return userTask;
+  });
+}
+
 // Завершить задание с проверками
 export async function completeTask(userId: string, taskId: string) {
   return prisma.$transaction(async (tx) => {
@@ -222,6 +280,7 @@ export async function completeTask(userId: string, taskId: string) {
     if (!task) {
       throw new Error("Task not found");
     }
+
     // Проверяем статус пользователя
     const userTask = await tx.userTask.findUnique({
       where: { userId_taskId: { userId, taskId } },
@@ -229,9 +288,20 @@ export async function completeTask(userId: string, taskId: string) {
     if (!userTask) {
       throw new Error("Task was not started");
     }
-    if (userTask.status !== UserTaskStatus.IN_PROGRESS) {
-      throw new Error(`Cannot complete task with status: ${userTask.status}`);
+
+    // 🔥 Для FREE_BONUS разрешаем завершение из любого статуса кроме CLAIMED
+    if (task.type === "FREE_BONUS") {
+      if (userTask.status === UserTaskStatus.CLAIMED) {
+        throw new Error("Task already claimed");
+      }
+      // Можем завершить из любого другого статуса
+    } else {
+      // Для обычных задач - только из IN_PROGRESS
+      if (userTask.status !== UserTaskStatus.IN_PROGRESS) {
+        throw new Error(`Cannot complete task with status: ${userTask.status}`);
+      }
     }
+
     // Обновляем статус
     const updatedUserTask = await tx.userTask.update({
       where: { userId_taskId: { userId, taskId } },
@@ -240,11 +310,15 @@ export async function completeTask(userId: string, taskId: string) {
         completedAt: new Date(),
       },
     });
-    // Увеличиваем счетчик
-    await tx.task.update({
-      where: { id: taskId },
-      data: { completedCount: { increment: 1 } },
-    });
+
+    // Увеличиваем счетчик только если еще не увеличили
+    if (userTask.status !== UserTaskStatus.COMPLETED) {
+      await tx.task.update({
+        where: { id: taskId },
+        data: { completedCount: { increment: 1 } },
+      });
+    }
+
     return updatedUserTask;
   });
 }

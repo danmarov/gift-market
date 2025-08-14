@@ -90,7 +90,7 @@ export function useAuth() {
       }
 
       // Обычная проверка онбординга для не-админов
-      if (user.onboardingStatus === "NEW") {
+      if (user.onboardingStatus !== "COMPLETED") {
         console.log("🔄 Redirecting to onboarding...");
         setIsCheckingOnboarding(true);
         router.push("/onboarding");

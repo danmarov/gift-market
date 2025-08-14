@@ -2,9 +2,9 @@
 import { z } from "zod";
 const TaskType = {
   TELEGRAM_SUBSCRIPTION: "TELEGRAM_SUBSCRIPTION",
-  DAILY_BONUS: "DAILY_BONUS",
+  FREE_BONUS: "FREE_BONUS",
 } as const;
-export type TaskType = "TELEGRAM_SUBSCRIPTION" | "DAILY_BONUS";
+export type TaskType = "TELEGRAM_SUBSCRIPTION" | "FREE_BONUS";
 
 const TaskDuration = {
   ONE_DAY: "ONE_DAY",
@@ -21,28 +21,69 @@ export type UserTaskStatus =
   | "CLAIMED";
 
 export const createTaskSchema = z.object({
-  type: z.enum(TaskType),
-  duration: z.enum(TaskDuration),
+  type: z.enum(["TELEGRAM_SUBSCRIPTION", "FREE_BONUS"]),
+  duration: z.enum(["ONE_DAY", "ONE_WEEK", "ONE_MONTH"]),
   title: z
     .string()
     .min(1, "Название обязательно")
     .max(100, "Максимум 100 символов"),
-  description: z.string().min(1, "Описание обязательно"),
+  description: z.string().optional(),
   reward: z
     .number()
     .min(1, "Награда должна быть больше 0")
     .max(1000, "Максимум 1000 звезд"),
   icon: z.string().min(1, "Выберите иконку"),
-  channel_url: z.string().url("Введите корректную ссылку на канал"),
-  chat_id: z.string().min(1, "Это обязательное поле"),
+
+  // 🔥 Делаем эти поля опциональными
+  channel_url: z.string().optional(),
+  chat_id: z.string().optional(),
+
   max_completions: z.number().optional(),
   starts_at: z.date().optional(),
 });
 
+export const createTaskSchemaWithValidation = createTaskSchema
+  .refine(
+    (data) => {
+      if (data.type === "TELEGRAM_SUBSCRIPTION") {
+        return (
+          data.channel_url &&
+          data.channel_url.trim() !== "" &&
+          data.chat_id &&
+          data.chat_id.trim() !== ""
+        );
+      }
+      // Для FREE_BONUS эти поля не нужны
+      return true;
+    },
+    {
+      message: "Ссылака на канал обязательна",
+      path: ["channel_url"],
+    }
+  )
+  .refine(
+    (data) => {
+      // Проверяем URL только если он заполнен
+      if (data.channel_url && data.channel_url.trim() !== "") {
+        try {
+          new URL(data.channel_url);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      return true;
+    },
+    {
+      message: "Введите корректную ссылку на канал",
+      path: ["channel_url"],
+    }
+  );
+
 export type CreateTaskFormData = z.infer<typeof createTaskSchema>;
 
 export const editTaskSchema = z.object({
-  type: z.enum(["TELEGRAM_SUBSCRIPTION", "TIKTOK_COMMENT", "DAILY_BONUS"], {
+  type: z.enum(["TELEGRAM_SUBSCRIPTION", "FREE_BONUS", "TIKTOK_COMMENT"], {
     message: "Выберите тип задания",
   }),
   duration: z.enum(["ONE_DAY", "ONE_WEEK", "ONE_MONTH"], {
@@ -52,19 +93,75 @@ export const editTaskSchema = z.object({
     .string()
     .min(1, "Название обязательно")
     .max(100, "Максимум 100 символов"),
-  description: z.string().min(1, "Описание обязательно"),
+  description: z.string().optional(), // 🔥 Делаем опциональным как в createTaskSchema
   reward: z
     .number()
     .min(1, "Награда должна быть больше 0")
     .max(1000, "Максимум 1000 звезд"),
   icon: z.string().min(1, "Выберите иконку"),
-  channel_url: z.string().url("Введите корректную ссылку на канал"),
-  chat_id: z.string().min(1, "Это обязательное поле"),
+
+  // 🔥 Делаем эти поля опциональными
+  channel_url: z.string().optional(),
+  chat_id: z.string().optional(),
+
   max_completions: z.number().optional(),
   starts_at: z.date().optional(),
   is_active: z.boolean(),
   is_visible: z.boolean(),
 });
+
+// Схема с условной валидацией для редактирования
+export const editTaskSchemaWithValidation = editTaskSchema
+  .refine(
+    (data) => {
+      // Если тип TELEGRAM_SUBSCRIPTION, то channel_url и chat_id обязательны
+      if (data.type === "TELEGRAM_SUBSCRIPTION") {
+        return (
+          data.channel_url &&
+          data.channel_url.trim() !== "" &&
+          data.chat_id &&
+          data.chat_id.trim() !== ""
+        );
+      }
+      // Для FREE_BONUS и других типов эти поля не нужны
+      return true;
+    },
+    {
+      message: "Ссылка на канал обязательна для Telegram подписки",
+      path: ["channel_url"],
+    }
+  )
+  .refine(
+    (data) => {
+      // Если тип TELEGRAM_SUBSCRIPTION, то chat_id тоже должен быть заполнен
+      if (data.type === "TELEGRAM_SUBSCRIPTION") {
+        return data.chat_id && data.chat_id.trim() !== "";
+      }
+      return true;
+    },
+    {
+      message: "Chat ID обязателен для Telegram подписки",
+      path: ["chat_id"],
+    }
+  )
+  .refine(
+    (data) => {
+      // Проверяем URL только если он заполнен
+      if (data.channel_url && data.channel_url.trim() !== "") {
+        try {
+          new URL(data.channel_url);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      return true;
+    },
+    {
+      message: "Введите корректную ссылку на канал",
+      path: ["channel_url"],
+    }
+  );
 
 // Тип данных формы редактирования
 export type EditTaskFormData = z.infer<typeof editTaskSchema>;
@@ -120,11 +217,11 @@ export interface EditTaskActionData {
   type: string;
   duration: string;
   title: string;
-  description: string;
+  description?: string;
   reward: number;
   icon: string;
-  channelUrl: string;
-  chatId: string;
+  channelUrl?: string;
+  chatId?: string;
   startsAt?: Date;
   maxCompletions?: number;
   isActive: boolean;

@@ -1,5 +1,6 @@
 import { TaskActionType, TaskIconType } from "@/lib/types/task";
 import { cn } from "@sglara/cn";
+import { Gift } from "lucide-react";
 import React from "react";
 
 interface TaskCardProps {
@@ -34,6 +35,8 @@ const icons = {
       </g>
     </svg>
   ),
+
+  gift: <Gift className="size-[20px]" />,
 
   tiktok: (
     <svg
@@ -162,7 +165,7 @@ const renderAction = (
     case "claim":
       return (
         <button onClick={handleClick} className="task-action-claim font-mono">
-          Получить награду
+          Получить
         </button>
       );
 

@@ -6,7 +6,11 @@ import Textarea from "@/components/ui/textarea";
 import React, { forwardRef, useEffect, useImperativeHandle } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CreateTaskFormData, createTaskSchema } from "@/lib/types/task";
+import {
+  CreateTaskFormData,
+  createTaskSchema,
+  createTaskSchemaWithValidation,
+} from "@/lib/types/task";
 
 export interface CreateTaskFormRef {
   submitForm: () => void;
@@ -22,7 +26,7 @@ const CreateTaskForm = forwardRef<CreateTaskFormRef, CreateTaskFormProps>(
   ({ onSubmit, onValidationChange }, ref) => {
     const typeOptions = [
       { value: "TELEGRAM_SUBSCRIPTION", label: "Подписка на Telegram канал" },
-      //   { value: "DAILY_BONUS", label: "Ежедневный бонус", disabled: true },
+      { value: "FREE_BONUS", label: "Бесплатный бонус", disabled: false },
       {
         value: "TIKTOK_COMMENT",
         label: "Комментарий в Tiktok",
@@ -39,7 +43,7 @@ const CreateTaskForm = forwardRef<CreateTaskFormRef, CreateTaskFormProps>(
     const iconOptions = [
       { value: "telegram", label: "📱 Telegram" },
       { value: "youtube", label: "📺 YouTube" },
-      { value: "instagram", label: "📷 Instagram" },
+      { value: "gift", label: "🎁 Подарок" },
       { value: "twitter", label: "🐦 Twitter" },
       { value: "tiktok", label: "🎵 TikTok" },
     ];
@@ -51,7 +55,7 @@ const CreateTaskForm = forwardRef<CreateTaskFormRef, CreateTaskFormProps>(
       reset,
       watch,
     } = useForm<CreateTaskFormData>({
-      resolver: zodResolver(createTaskSchema),
+      resolver: zodResolver(createTaskSchemaWithValidation),
       mode: "onChange",
       defaultValues: {
         type: "TELEGRAM_SUBSCRIPTION",

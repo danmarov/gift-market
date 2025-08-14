@@ -20,7 +20,7 @@ if (!token) {
 
 const bot = new Bot(token);
 const channelUrl = "https://t.me/reactorgift"; // Замените на ссылку вашего канала
-
+const isProduction = process.env.production === "production";
 const webappKb = new InlineKeyboard()
   .webApp("🎮 Открыть приложение", webappUrl)
   .row() // Переносим следующую кнопку на новую строку
@@ -103,15 +103,7 @@ async function validateUser(ctx: any, next: NextFunction) {
 
   // Проверяем наличие username
   if (!telegramUser.username || telegramUser.username.trim() === "") {
-    await ctx.reply(
-      "❗ Для использования бота необходимо установить имя пользователя (username) в настройках Telegram.\n\n" +
-        "📱 Как это сделать:\n" +
-        "1. Откройте настройки Telegram\n" +
-        "2. Нажмите на 'Имя пользователя'\n" +
-        "3. Придумайте и введите уникальное имя\n" +
-        "4. Сохраните изменения\n\n" +
-        "После установки username попробуйте снова! 😊"
-    );
+    await ctx.reply("пишет привет тебе чувак");
     return;
   }
 
@@ -191,15 +183,18 @@ bot.command("start", async (ctx) => {
   const sendWelcomeMessage = async (greeting: string) => {
     const message = `<b>${greeting}, ${firstName}! 🎉</b>\n\n🎁 Лови подарки, зарабатывай звёзды и участвуй в розыгрышах`;
 
-    await ctx.replyWithPhoto(welcomePhotoFileId, {
-      caption: message,
-      parse_mode: "HTML",
-      reply_markup: webappKb,
-    });
-    // await ctx.reply(message, {
-    //   parse_mode: "HTML",
-    //   reply_markup: webappKb,
-    // });
+    if (isProduction) {
+      await ctx.replyWithPhoto(welcomePhotoFileId, {
+        caption: message,
+        parse_mode: "HTML",
+        reply_markup: webappKb,
+      });
+    } else {
+      await ctx.reply(message, {
+        parse_mode: "HTML",
+        reply_markup: webappKb,
+      });
+    }
   };
 
   if (existingUser) {

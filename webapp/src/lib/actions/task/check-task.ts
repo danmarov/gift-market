@@ -33,39 +33,60 @@ async function _checkTask(
       throw new Error("Задача не найдена");
     }
 
-    const metadata =
-      typeof task.metadata === "string"
-        ? (JSON.parse(task.metadata) as TaskMetadata)
-        : (task.metadata as TaskMetadata);
-
-    const chatId = metadata.chatId;
-    const telegramUserId = session.telegramId;
-    if (!chatId || !telegramUserId) {
-      throw new Error("Ошибка при проверке задания");
-    }
-
-    const isSubscribed = await isUserMemberOfChannel(telegramUserId, chatId);
-    if (isSubscribed) {
-      // Если проверка прошла - помечаем задание как выполненное
-      const userTask = await dbCompleteTask(session.id, taskId);
-
-      console.log("✅ [SERVER] Task completed successfully");
-
+    // 🔥 FREE_BONUS не должен попадать в check (он сразу завершается в start)
+    if (task.type === "FREE_BONUS") {
+      console.log("🎁 [SERVER] FREE_BONUS task - should already be completed");
       return {
-        success: true,
-        completed: true,
-        data: userTask,
-      };
-    } else {
-      // Если не подписан - возвращаем ошибку
-      console.log("❌ [SERVER] User not subscribed");
-
-      return {
-        success: true,
-        completed: false,
-        error: "Вы не подписаны на канал",
+        success: false,
+        error: "FREE_BONUS задачи не требуют проверки",
       };
     }
+
+    // 🔥 Для TELEGRAM_SUBSCRIPTION проверяем подписку
+    if (task.type === "TELEGRAM_SUBSCRIPTION") {
+      const metadata =
+        typeof task.metadata === "string"
+          ? (JSON.parse(task.metadata) as TaskMetadata)
+          : (task.metadata as TaskMetadata);
+
+      const chatId = metadata.chatId;
+      const telegramUserId = session.telegramId;
+
+      if (!chatId || !telegramUserId) {
+        throw new Error("Ошибка при проверке задания");
+      }
+
+      const isSubscribed = await isUserMemberOfChannel(telegramUserId, chatId);
+
+      if (isSubscribed) {
+        const userTask = await dbCompleteTask(session.id, taskId);
+
+        console.log(
+          "✅ [SERVER] TELEGRAM_SUBSCRIPTION task completed successfully"
+        );
+
+        return {
+          success: true,
+          completed: true,
+          data: userTask,
+        };
+      } else {
+        console.log("❌ [SERVER] User not subscribed to channel");
+
+        return {
+          success: true,
+          completed: false,
+          error: "Вы не подписаны на канал",
+        };
+      }
+    }
+
+    // 🔥 Для других типов задач
+    console.log("⚠️ [SERVER] Unknown task type:", task.type);
+    return {
+      success: false,
+      error: "Неподдерживаемый тип задания",
+    };
   } catch (error) {
     console.error("💥 [SERVER] Error checking task:", error);
 

@@ -67,7 +67,7 @@ model Referral {
 
 model Gift {
   id                String            @id 
-  telegramGiftId    String?           @unique @map("telegram_gift_id")  
+  telegramGiftId    String?           @map("telegram_gift_id")  
   name              String
   description       String?
   mediaUrl          String            @map("media_url")
@@ -91,7 +91,7 @@ model Gift {
 
 enum TaskType {
   TELEGRAM_SUBSCRIPTION
-  DAILY_BONUS
+  FREE_BONUS
 }
 
 enum TaskDuration {

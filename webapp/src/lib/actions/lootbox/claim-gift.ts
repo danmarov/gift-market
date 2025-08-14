@@ -7,10 +7,11 @@ import {
   findUserById,
   UserOnboardingStatus,
   createPurchase as createPurchaseDb,
+  markPurchaseAsSent,
 } from "database";
 import { JWTSession } from "@/lib/types/session";
 import { withServerAuth } from "../auth/with-server-auth";
-import { isUserMemberOfChannel, notifyAdmin } from "../bot";
+import { isUserMemberOfChannel, notifyAdmin, sendGift } from "../bot";
 
 export type ClaimGiftResult =
   | {
@@ -56,53 +57,58 @@ async function _claimGift(session: JWTSession): Promise<ClaimGiftResult> {
     // Получаем все активные задачи
     const tasks = await getActiveLootBoxTasks();
 
+    console.log(`📋 [SERVER] Found ${tasks.length} active tasks`);
+
+    // Если задач нет, считаем что условия онбординга выполнены
     if (tasks.length === 0) {
-      return { success: false, error: "No active tasks found" };
-    }
+      console.log(
+        "✅ [SERVER] No tasks required - onboarding conditions met automatically"
+      );
+    } else {
+      // Проверяем подписки через наш модуль bot.ts
+      const missingSubscriptions: string[] = [];
 
-    // Проверяем подписки через наш модуль bot.ts
-    const missingSubscriptions: string[] = [];
+      console.log(
+        "📋 [SERVER] Checking subscriptions for",
+        tasks.length,
+        "tasks"
+      );
 
-    console.log(
-      "📋 [SERVER] Checking subscriptions for",
-      tasks.length,
-      "tasks"
-    );
+      // Проверяем каждую подписку
+      for (const task of tasks) {
+        try {
+          const isMember = await isUserMemberOfChannel(
+            session.telegramId.toString(),
+            task.channelId
+          );
 
-    // Проверяем каждую подписку
-    for (const task of tasks) {
-      try {
-        const isMember = await isUserMemberOfChannel(
-          session.telegramId.toString(),
-          task.channelId
-        );
-
-        if (!isMember) {
-          console.log(`❌ [SERVER] User not subscribed to ${task.title}`);
+          if (!isMember) {
+            console.log(`❌ [SERVER] User not subscribed to ${task.title}`);
+            missingSubscriptions.push(task.title);
+          } else {
+            console.log(`✅ [SERVER] User subscribed to ${task.title}`);
+          }
+        } catch (error) {
+          console.error(
+            `❌ [SERVER] Error checking subscription for ${task.channelId}:`,
+            error
+          );
           missingSubscriptions.push(task.title);
-        } else {
-          console.log(`✅ [SERVER] User subscribed to ${task.title}`);
         }
-      } catch (error) {
-        console.error(
-          `❌ [SERVER] Error checking subscription for ${task.channelId}:`,
-          error
-        );
-        missingSubscriptions.push(task.title);
       }
-    }
 
-    // Если есть не выполненные подписки
-    if (missingSubscriptions.length > 0) {
-      console.log("❌ [SERVER] Missing subscriptions:", missingSubscriptions);
-      return {
-        success: false,
-        error: `Please subscribe to all channels first`,
-        missingSubscriptions,
-      };
-    }
+      // Если есть не выполненные подписки
+      if (missingSubscriptions.length > 0) {
+        console.log("❌ [SERVER] Missing subscriptions:", missingSubscriptions);
+        return {
+          success: false,
+          error: `Please subscribe to all channels first`,
+          missingSubscriptions,
+        };
+      }
 
-    console.log("✅ [SERVER] All subscriptions verified!");
+      console.log("✅ [SERVER] All subscriptions verified!");
+    }
 
     // Все подписки выполнены - забираем подарок!
     const claimedDraw = await claimLootBoxPrize(currentDraw.id);
@@ -117,32 +123,133 @@ async function _claimGift(session: JWTSession): Promise<ClaimGiftResult> {
       "🎉 [SERVER] Gift successfully claimed and onboarding completed!"
     );
 
-    await createPurchaseDb({
+    // Создаем запись о "покупке" (бесплатной)
+    const purchase = await createPurchaseDb({
       buyerId: session.id,
       giftId: claimedDraw.prize.gift.id,
       quantity: 1,
       totalPrice: 0,
       pricePerItem: 0,
     });
-    await notifyAdmin({
-      message: `
-🎉 <b>Новый выигрыш подарка!</b>
+
+    const gift = claimedDraw.prize.gift;
+
+    console.log("🎁 Purchase created for claimed gift:", {
+      id: purchase.id,
+      hasTelegramGiftId: !!(
+        gift.telegramGiftId && gift.telegramGiftId.trim() !== ""
+      ),
+    });
+
+    // Проверяем, можем ли отправить автоматически
+    if (gift.telegramGiftId && gift.telegramGiftId.trim() !== "") {
+      console.log("🤖 Attempting automatic gift delivery for claimed gift...");
+
+      try {
+        // Пытаемся отправить подарок через Telegram API
+        const giftSent = await sendGift({
+          userId: session.telegramId,
+          giftId: gift.telegramGiftId,
+          text: ``,
+          parseMode: "HTML",
+        });
+
+        if (!giftSent) {
+          throw new Error("Failed to send claimed gift");
+        }
+
+        // Если подарок отправлен успешно, обновляем статус на SENT
+        await markPurchaseAsSent(
+          purchase.id,
+          undefined, // telegramMessageId не нужен для автоматических
+          `Автоматически отправлен выигранный подарок через Telegram API`
+        );
+
+        console.log("✅ Automatic delivery of claimed gift successful!");
+
+        // Уведомляем админа об успешной автоматической отправке
+        await notifyAdmin({
+          message: `
+🎉 <b>Выигранный подарок отправлен автоматически!</b>
 
 👤 Пользователь: ${session.telegramId}
-🎁 Подарок: ${claimedDraw.prize.gift.name} (x${1})
+🎁 Подарок: ${gift.name} (выигран)
+💰 Стоимость: Бесплатно
+🤖 Статус: Автоматически отправлен
+📅 Время: ${new Date().toLocaleString()}
+
+✅ Все задачи выполнены
+          `,
+          keyboard: "webapp",
+          webappButtonText: "📈 Открыть историю",
+          webappUrl: `${process.env.WEBAPP_URL}/admin/orders`,
+        });
+
+        return {
+          success: true,
+          message: `🎉 Поздравляем! Подарок "${gift.name}" отправлен вам в Telegram!`,
+        };
+      } catch (autoError: any) {
+        console.error(
+          "❌ Automatic delivery of claimed gift failed:",
+          autoError
+        );
+
+        // Получаем сообщение об ошибке
+        const errorMessage = autoError?.message || "Неизвестная ошибка";
+
+        // Автоматическая отправка не удалась, оставляем в ручном режиме
+        await notifyAdmin({
+          message: `
+⚠️ <b>Выигранный подарок требует ручной отправки!</b>
+
+👤 Пользователь: ${session.telegramId}
+🎁 Подарок: ${gift.name} (выигран)
+💰 Стоимость: Бесплатно
+🤖 Автоматическая отправка не удалась: ${errorMessage}
+📅 Время: ${new Date().toLocaleString()}
+
+✅ Все задачи выполнены
+❗ Требуется ручная обработка заказа
+          `,
+          keyboard: "webapp",
+          webappButtonText: "📦 Обработать заказ",
+          webappUrl: `${process.env.WEBAPP_URL}/admin/orders`,
+        });
+
+        return {
+          success: true,
+          message: `🎉 Поздравляем! Вы выиграли "${gift.name}"! Подарок будет отправлен администратором.`,
+        };
+      }
+    } else {
+      // Это кастомный подарок, требуется ручная отправка
+      console.log(
+        "📦 Manual delivery required for claimed gift (no telegramGiftId)"
+      );
+
+      await notifyAdmin({
+        message: `
+🎉 <b>Новый выигранный подарок (ручная отправка)!</b>
+
+👤 Пользователь: ${session.telegramId}
+🎁 Подарок: ${gift.name} (выигран)
 💰 Стоимость: Бесплатно
 📅 Время: ${new Date().toLocaleString()}
 
 ✅ Все задачи выполнены
-  `,
-      keyboard: "webapp",
-      webappButtonText: "📈 Открыть ордера",
-      webappUrl: `${process.env.WEBAPP_URL}/admin/orders`,
-    });
-    return {
-      success: true,
-      message: `Congratulations! You have successfully claimed: ${claimedDraw.prize.gift.name}`,
-    };
+❗ Требуется ручная обработка
+        `,
+        keyboard: "webapp",
+        webappButtonText: "📦 Обработать заказ",
+        webappUrl: `${process.env.WEBAPP_URL}/admin/orders`,
+      });
+
+      return {
+        success: true,
+        message: `🎉 Поздравляем! Вы выиграли "${gift.name}"! Подарок будет отправлен администратором.`,
+      };
+    }
   } catch (error) {
     console.error("💥 [SERVER] Error claiming gift:", error);
     return {

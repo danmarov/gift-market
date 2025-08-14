@@ -1,7 +1,11 @@
 // lib/actions/task/start-task.ts
 "use server";
 
-import { startTask as dbStartTask } from "database";
+import {
+  startTask as dbStartTask,
+  findTaskById,
+  startAndCompleteTask,
+} from "database";
 import { withServerAuth } from "../auth/with-server-auth";
 import { JWTSession } from "@/lib/types/session";
 
@@ -21,6 +25,29 @@ async function _startTask(
       taskId
     );
 
+    // Получаем информацию о задаче
+    const task = await findTaskById(taskId);
+    if (!task) {
+      throw new Error("Задача не найдена");
+    }
+
+    // 🔥 Для FREE_BONUS используем специальную функцию
+    if (task.type === "FREE_BONUS") {
+      console.log(
+        "🎁 [SERVER] FREE_BONUS task - starting and completing immediately"
+      );
+
+      const userTask = await startAndCompleteTask(session.id, taskId);
+
+      console.log("✅ [SERVER] FREE_BONUS task completed immediately");
+
+      return {
+        success: true,
+        data: userTask,
+      };
+    }
+
+    // 🔥 Для обычных задач стандартная логика
     const userTask = await dbStartTask(session.id, taskId);
 
     console.log("✅ [SERVER] Task started successfully");

@@ -76,6 +76,22 @@ export default function TasksList({ initialData, error }: TasksListProps) {
       return;
     }
 
+    // 🔥 Для FREE_BONUS особая логика
+    if (task.type === "FREE_BONUS") {
+      switch (action) {
+        case "claim":
+          await handleClaimFreeBonusReward(task);
+          break;
+        case "completed":
+          console.log("✅ Free bonus already claimed");
+          break;
+        default:
+          console.warn("⚠️ Unknown action for FREE_BONUS:", action);
+      }
+      return;
+    }
+
+    // Обычная логика для других типов
     switch (action) {
       case "available":
       case "timer":
@@ -92,6 +108,47 @@ export default function TasksList({ initialData, error }: TasksListProps) {
         break;
       default:
         console.warn("⚠️ Unknown action:", action);
+    }
+  };
+  const handleClaimFreeBonusReward = async (task: TaskWithUserStatus) => {
+    try {
+      setTaskLoading(task.id, true);
+      console.log("🎁 Claiming free bonus:", task.title);
+
+      // Для FREE_BONUS сразу стартуем и забираем награду
+      const startResult = await startTask(task.id);
+
+      if (!startResult.success) {
+        console.error("❌ Failed to start free bonus task:", startResult.error);
+        showToast?.error("Ошибка при получении бонуса");
+        setTaskLoading(task.id, false);
+        return;
+      }
+
+      // Сразу забираем награду
+      const claimResult = await claimReward(task.id);
+
+      if (claimResult.success) {
+        console.log("✅ Free bonus claimed successfully!");
+        showToast?.success(`Вы получили ${task.reward} звёзд! ⭐`);
+        hapticFeedback("success");
+
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["tasks", user!.id] }),
+          queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY }),
+        ]);
+      } else {
+        console.error("❌ Failed to claim free bonus:", claimResult.error);
+        showToast?.error(claimResult.error || "Ошибка при получении бонуса");
+        hapticFeedback("error");
+      }
+
+      setTaskLoading(task.id, false);
+    } catch (error) {
+      console.error("💥 Error claiming free bonus:", error);
+      showToast?.error("Произошла ошибка при получении бонуса");
+      hapticFeedback("error");
+      setTaskLoading(task.id, false);
     }
   };
 
@@ -158,8 +215,8 @@ export default function TasksList({ initialData, error }: TasksListProps) {
 
       if (result.success) {
         console.log("✅ Reward claimed successfully!");
-        showToast?.success(`Поздравляем! Вы получили ${task.reward} звёзд! ⭐`);
-        hapticFeedback('success')
+        showToast?.success(`Вы получили ${task.reward} звёзд! ⭐`);
+        hapticFeedback("success");
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["tasks", user!.id] }),
           queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY }),
@@ -173,14 +230,23 @@ export default function TasksList({ initialData, error }: TasksListProps) {
     } catch (error) {
       console.error("💥 Error claiming reward:", error);
       showToast?.error("Произошла ошибка при получении награды");
-        hapticFeedback('error')
+      hapticFeedback("error");
 
       setTaskLoading(task.id, false);
     }
   };
 
   const handleCardClick = async (task: TaskWithUserStatus) => {
-    // Всегда открываем канал
+    // Для FREE_BONUS не открываем каналы
+    if (task.type === "FREE_BONUS") {
+      // Если доступен для получения - сразу забираем
+      if (task.userStatus === "AVAILABLE") {
+        await handleClaimFreeBonusReward(task);
+      }
+      return;
+    }
+
+    // Для обычных задач - открываем канал
     if (task.type === "TELEGRAM_SUBSCRIPTION" && task.metadata?.channelUrl) {
       if (!isMobile) {
         return openLink(task.metadata.channelUrl);
@@ -213,7 +279,8 @@ export default function TasksList({ initialData, error }: TasksListProps) {
     const actionType = getActionType(
       task.userStatus,
       task.expiresAt,
-      task.duration
+      task.duration,
+      task.type
     );
     const timerValue =
       actionType === "timer"

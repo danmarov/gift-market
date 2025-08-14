@@ -1,24 +1,34 @@
-import { TaskActionType, UserTaskStatus } from "../types/task";
+import { TaskActionType, TaskType, UserTaskStatus } from "../types/task";
 
 export function getActionType(
-  status: UserTaskStatus,
+  userStatus: UserTaskStatus,
   expiresAt: Date,
-  duration: "ONE_DAY" | "ONE_WEEK" | "ONE_MONTH"
+  duration: "ONE_DAY" | "ONE_WEEK" | "ONE_MONTH",
+  taskType?: TaskType
 ): TaskActionType {
   const now = new Date();
-
+  if (taskType === "FREE_BONUS") {
+    switch (userStatus) {
+      case "AVAILABLE":
+        return "claim"; // 🔥 Сразу кнопка "Получить"
+      case "CLAIMED":
+        return "completed"; // 🔥 Уже получено
+      default:
+        return "completed";
+    }
+  }
   // Если задание истекло
   if (expiresAt <= now) {
     return "timer"; // показываем таймер истечения (00:00:00)
   }
 
   // Для ежедневных заданий (ONE_DAY) показываем таймер до истечения
-  if (duration === "ONE_DAY" && status === "AVAILABLE") {
+  if (duration === "ONE_DAY" && userStatus === "AVAILABLE") {
     return "timer";
   }
 
   // Для остальных - обычная логика
-  switch (status) {
+  switch (userStatus) {
     case "AVAILABLE":
       return "available"; // кнопка "Перейти"
     case "IN_PROGRESS":

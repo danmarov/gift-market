@@ -8,7 +8,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import CongratsMessage from "./congrats-message";
 import LoadingScreen from "@/components/common/loading-screen";
-import TelegramBackButton from "@/components/common/telegram-back-button";
 
 interface OnboardingContentProps {
   onboardingStatus: UserOnboardingStatus;
@@ -103,8 +102,6 @@ export default function OnboardingContent({
     if (giftData?.gift) {
       return (
         <div className="size-full grid place-items-center relative select-none flex-1">
-          <TelegramBackButton />
-
           <CongratsMessage gift={giftData.gift} />
         </div>
       );

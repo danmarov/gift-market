@@ -1,7 +1,5 @@
-// hooks/use-auth.ts
 "use client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRawInitData } from "@telegram-apps/sdk-react";
 import { checkSession } from "@/lib/actions/auth/check-session";
 import { authenticateWithInitData } from "@/lib/actions/auth/authenticate-with-init-data";
 import { useEffect, useMemo, useState } from "react";
@@ -11,31 +9,62 @@ export const AUTH_QUERY_KEY = ["auth", "user"] as const;
 
 export function useAuth() {
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
   const pathname = usePathname();
-  const rawInitData = useRawInitData();
   const queryClient = useQueryClient();
   const router = useRouter();
 
+  // Проверяем что мы на клиенте
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Получаем rawInitData напрямую из window после монтирования
+  const rawInitData = useMemo(() => {
+    if (!isMounted || typeof window === "undefined") return null;
+
+    // Пробуем разные источники данных
+    // @ts-ignore
+    const webAppInitData = window.Telegram?.WebApp?.initData;
+
+    // Проверяем что данные не пустые
+    if (webAppInitData && webAppInitData.trim() !== "") {
+      return webAppInitData;
+    }
+
+    // Если WebApp данных нет, можно попробовать из URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const tgWebAppData = urlParams.get("tgWebAppData");
+
+    if (tgWebAppData && tgWebAppData.trim() !== "") {
+      return tgWebAppData;
+    }
+
+    return null;
+  }, [isMounted]);
+
   const telegramIdFromInitData = useMemo(() => {
-    if (!rawInitData) return null;
+    if (!rawInitData || !isMounted) return null;
 
     try {
       const parsed = new URLSearchParams(rawInitData);
       const userParam = parsed.get("user");
       if (userParam) {
         const user = JSON.parse(userParam);
-        return user.id?.toString();
+        return user.id?.toString() || null;
       }
     } catch (error) {
       console.warn("Error parsing initData:", error);
     }
     return null;
-  }, [rawInitData]);
+  }, [rawInitData, isMounted]);
 
   const authQuery = useQuery({
     queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
       console.log("🔐 Starting authentication flow...");
+      console.log("📱 rawInitData:", !!rawInitData);
+      console.log("👤 telegramIdFromInitData:", telegramIdFromInitData);
 
       const sessionResult = await checkSession(
         telegramIdFromInitData || undefined
@@ -62,7 +91,7 @@ export function useAuth() {
       console.log("✅ InitData authentication successful");
       return authResult.user;
     },
-    enabled: true,
+    enabled: isMounted && (!!rawInitData || typeof window === "undefined"), // 🔥 Работает на сервере тоже
     staleTime: 30 * 1000,
     gcTime: 60 * 60 * 1000,
     retry: 1,
@@ -72,6 +101,8 @@ export function useAuth() {
 
   // Проверка онбординга
   useEffect(() => {
+    if (!isMounted) return;
+
     // Не проверяем онбординг на самой странице онбординга
     if (pathname === "/onboarding" || pathname === "/admin/roulette") {
       setIsCheckingOnboarding(false);
@@ -103,6 +134,7 @@ export function useAuth() {
     authQuery.data?.role,
     authQuery.isLoading,
     pathname,
+    isMounted,
   ]);
 
   // Функции для управления - БЕЗ useCallback чтобы избежать циклов
@@ -115,6 +147,19 @@ export function useAuth() {
   const updateUser = (updater: (oldUser: any) => any) => {
     queryClient.setQueryData(AUTH_QUERY_KEY, updater);
   };
+
+  // Если не смонтирован - показываем загрузку
+  if (!isMounted) {
+    return {
+      user: null,
+      isLoading: true,
+      error: null,
+      isError: false,
+      refetchUser,
+      invalidateUser,
+      updateUser,
+    };
+  }
 
   return {
     user: authQuery.data ?? null,

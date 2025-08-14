@@ -80,7 +80,7 @@ export function GiftPageContent({
           presets={[10, 20, 50]}
           maxQuantity={item.quantity}
         />
-        {user!.role === "ADMIN" && (
+        {user?.role === "ADMIN" && (
           <div className="absolute top-3 right-3 flex gap-2 z-20">
             <Link href={`/admin/gift/edit/${item.id}`}>
               <Button

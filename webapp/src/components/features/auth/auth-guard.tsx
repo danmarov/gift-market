@@ -53,24 +53,19 @@ function ErrorScreen({ error, onRetry }: ErrorScreenProps) {
     </div>
   );
 }
-interface AuthGuardProps {
-  children: React.ReactNode;
-}
 
 export default function AuthGuard({ children }: AuthGuardProps) {
   const { user, isLoading, error, refetchUser } = useAuth();
 
-  if (isLoading || !user) {
-    return <LoadingScreen />;
-  }
+  // Показываем лоадер при загрузке
+  if (error) return <ErrorScreen error={error} onRetry={refetchUser} />;
+  if (isLoading || !user) return <LoadingScreen />;
 
-  if (error) {
-    return <ErrorScreen error={error} onRetry={refetchUser} />;
-  }
-
+  // Если нет пользователя после загрузки - ошибка
   if (!user) {
     return <ErrorScreen error="Пользователь не найден" onRetry={refetchUser} />;
   }
 
+  // ✅ Теперь гарантированно есть user с правильными типами
   return <>{children}</>;
 }

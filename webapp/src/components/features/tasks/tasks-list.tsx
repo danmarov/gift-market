@@ -31,13 +31,14 @@ export default function TasksList({ initialData, error }: TasksListProps) {
   const isAdmin = user?.role === "ADMIN";
 
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ["tasks", user!.id], // 🔥 Простой ключ
+    queryKey: ["tasks", user?.id], // ✅ Безопасно
     queryFn: async () => {
       const result = await getAllTasks(); // 🔥 Один вызов
       if (!result.success) throw new Error(result.error);
       return result.data!;
     },
     initialData,
+    enabled: !!user?.id,
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
   });
@@ -111,6 +112,7 @@ export default function TasksList({ initialData, error }: TasksListProps) {
     }
   };
   const handleClaimFreeBonusReward = async (task: TaskWithUserStatus) => {
+    if (!user?.id) return;
     try {
       setTaskLoading(task.id, true);
       console.log("🎁 Claiming free bonus:", task.title);
@@ -153,6 +155,7 @@ export default function TasksList({ initialData, error }: TasksListProps) {
   };
 
   const handleStartTask = async (task: TaskWithUserStatus) => {
+    if (!user?.id) return;
     try {
       setTaskLoading(task.id, true);
       console.log("🚀 Starting task:", task);
@@ -182,6 +185,7 @@ export default function TasksList({ initialData, error }: TasksListProps) {
   };
 
   const handleCheckTask = async (task: TaskWithUserStatus) => {
+    if (!user?.id) return;
     try {
       setTaskLoading(task.id, true);
       console.log("🔍 Checking task completion:", task.title);
@@ -207,6 +211,7 @@ export default function TasksList({ initialData, error }: TasksListProps) {
   };
 
   const handleClaimReward = async (task: TaskWithUserStatus) => {
+    if (!user?.id) return;
     try {
       setTaskLoading(task.id, true);
       console.log("🎁 Claiming reward for task:", task.title);
@@ -301,7 +306,9 @@ export default function TasksList({ initialData, error }: TasksListProps) {
       />
     );
   };
-
+  // if (!user) {
+  //   return null;
+  // }
   return (
     <>
       {/* Ежедневные задания */}

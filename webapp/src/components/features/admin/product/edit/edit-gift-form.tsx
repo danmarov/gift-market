@@ -5,11 +5,18 @@ import Input from "@/components/ui/input";
 import MultiSelect from "@/components/ui/multi-select";
 import Select from "@/components/ui/select";
 import Textarea from "@/components/ui/textarea";
-import React, { forwardRef, useEffect, useImperativeHandle } from "react";
+import FileUpload from "@/components/ui/file-upload";
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EditGiftFormData, editGiftSchema } from "@/lib/types/gift";
 import { Gift } from "database";
+import { Trash } from "lucide-react";
 
 export interface EditGiftFormRef {
   submitForm: () => void;
@@ -18,12 +25,17 @@ export interface EditGiftFormRef {
 
 interface EditGiftFormProps {
   gift: Gift;
-  onSubmit: (data: EditGiftFormData) => void;
+  onSubmit: (
+    data: EditGiftFormData & { deleteRevealAnimation?: boolean }
+  ) => void;
   onValidationChange?: (isValid: boolean) => void;
 }
 
 const EditGiftForm = forwardRef<EditGiftFormRef, EditGiftFormProps>(
   ({ gift, onSubmit, onValidationChange }, ref) => {
+    const [showDeleteAnimation, setShowDeleteAnimation] = useState(false);
+    const [animationToDelete, setAnimationToDelete] = useState(false);
+
     const skillOptions = [
       { value: "nft", label: "NFT" },
       { value: "special", label: "Special" },
@@ -40,6 +52,8 @@ const EditGiftForm = forwardRef<EditGiftFormRef, EditGiftFormProps>(
       handleSubmit,
       formState: { errors, isValid },
       reset,
+      watch,
+      setValue, // ДОБАВЬ ЭТО
     } = useForm<EditGiftFormData>({
       resolver: zodResolver(editGiftSchema),
       mode: "onChange",
@@ -48,6 +62,8 @@ const EditGiftForm = forwardRef<EditGiftFormRef, EditGiftFormProps>(
         description: gift.description || "",
         telegramGiftId: gift.telegramGiftId || undefined,
         mediaUrl: gift.mediaUrl || "",
+        revealAnimationFile: null,
+        deleteRevealAnimation: false, // ДОБАВЬ ЭТО
         price: gift.price || 0,
         quantity: gift.quantity || 0,
         backdropVariant: gift.backdropVariant || "YELLOW",
@@ -56,12 +72,40 @@ const EditGiftForm = forwardRef<EditGiftFormRef, EditGiftFormProps>(
       },
     });
 
+    const handleDeleteAnimation = () => {
+      setAnimationToDelete(true);
+      setValue("deleteRevealAnimation", true); // ОБНОВЛЯЙ ФОРМУ
+      console.log("🗑️ Помечена анимация для удаления");
+    };
+
+    const handleCancelDelete = () => {
+      setAnimationToDelete(false);
+      setValue("deleteRevealAnimation", false); // ОБНОВЛЯЙ ФОРМУ
+      console.log("↩️ Отменено удаление анимации");
+    };
+
+    const handleFormSubmit = (data: EditGiftFormData) => {
+      console.log("📝 [FORM] Данные формы редактирования подарка:", data);
+      onSubmit(data); // Теперь deleteRevealAnimation будет в data
+    };
+
+    // Следим за изменением файла анимации
+    const revealAnimationFile = watch("revealAnimationFile");
+
+    useEffect(() => {
+      // Показываем кнопку удаления если есть текущая анимация и не выбран новый файл
+      setShowDeleteAnimation(
+        !!gift.revealAnimation && !revealAnimationFile && !animationToDelete
+      );
+    }, [gift.revealAnimation, revealAnimationFile, animationToDelete]);
+
     useImperativeHandle(ref, () => ({
       submitForm: () => {
         handleSubmit(onSubmit)();
       },
       resetForm: () => {
         reset();
+        setAnimationToDelete(false);
       },
       isValid,
     }));
@@ -74,7 +118,7 @@ const EditGiftForm = forwardRef<EditGiftFormRef, EditGiftFormProps>(
 
     return (
       <div>
-        <form id="edit-gift-form" onSubmit={handleSubmit(onSubmit)}>
+        <form id="edit-gift-form" onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="flex flex-col gap-6">
             {/* Основная информация */}
             <div className="bg-white/5 rounded-2xl">
@@ -193,6 +237,77 @@ const EditGiftForm = forwardRef<EditGiftFormRef, EditGiftFormProps>(
                     />
                   )}
                 />
+
+                {/* Секция анимации разворота */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Анимация открытия
+                  </label>
+
+                  {/* Если анимация помечена для удаления */}
+                  {animationToDelete && (
+                    <div className="mb-3 p-3 bg-red-500/20 border border-red-500/40 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-red-300 text-sm">
+                          🗑️ Анимация будет удалена при сохранении
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleCancelDelete}
+                          className="text-white/70 hover:text-white text-sm underline"
+                        >
+                          Отменить
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Если есть текущая анимация и она не помечена для удаления */}
+                  {gift.revealAnimation && !animationToDelete && (
+                    <div className="mb-3 p-3 bg-white/10 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-white/80 text-sm">
+                            Текущая анимация:
+                          </span>
+                          <span className="text-white/60 text-xs break-all">
+                            {gift.revealAnimation}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleDeleteAnimation}
+                          className="ml-3 px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm rounded border border-red-500/40 transition-colors"
+                        >
+                          <Trash />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Загрузка нового файла */}
+                  {!animationToDelete && (
+                    <Controller
+                      name="revealAnimationFile"
+                      control={control}
+                      render={({ field: { onChange, value } }) => (
+                        <FileUpload
+                          label=""
+                          accept=".tgs"
+                          placeholder="Выберите новый TGS файл"
+                          error={errors.revealAnimationFile?.message}
+                          onChange={onChange}
+                          value={value || null}
+                          description={
+                            gift.revealAnimation
+                              ? "Новый файл заменит текущую анимацию"
+                              : "Поддерживается только формат .tgs"
+                          }
+                        />
+                      )}
+                    />
+                  )}
+                </div>
 
                 <Controller
                   name="backdropVariant"

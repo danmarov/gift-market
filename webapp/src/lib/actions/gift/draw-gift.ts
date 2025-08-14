@@ -6,6 +6,7 @@ import {
   updateUserOnboardingStatus,
   findUserById,
   UserOnboardingStatus,
+  findUserByTelegramId,
 } from "database";
 import { withServerAuth } from "../auth/with-server-auth";
 import { JWTSession } from "@/lib/types/session";
@@ -18,6 +19,7 @@ export type DrawGiftResult =
         gift: {
           name: string;
           mediaUrl: string;
+          revealAnimation?: string | null;
         };
       };
     }
@@ -28,7 +30,7 @@ async function _drawGift(session: JWTSession): Promise<DrawGiftResult> {
     console.log("🎲 [SERVER] Drawing gift for user:", session.id);
 
     // Получаем актуальные данные пользователя из БД
-    const user = await findUserById(session.id);
+    const user = await findUserByTelegramId(session.telegramId);
 
     if (!user) {
       throw new Error("User not found");
@@ -69,6 +71,7 @@ async function _drawGift(session: JWTSession): Promise<DrawGiftResult> {
         gift: {
           name: draw.prize.gift.name,
           mediaUrl: draw.prize.gift.mediaUrl,
+          revealAnimation: draw.prize.gift.revealAnimation,
         },
       },
     };

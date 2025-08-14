@@ -12,6 +12,7 @@ export type GetUserOnboardingGiftResult =
         gift: {
           name: string;
           mediaUrl: string;
+          revealAnimation?: string | null;
         };
         drawId: string;
         wonAt: Date;
@@ -69,6 +70,7 @@ async function _getUserOnboardingGift(
         gift: {
           name: latestDraw.prize.gift.name,
           mediaUrl: latestDraw.prize.gift.mediaUrl,
+          revealAnimation: latestDraw.prize.gift.revealAnimation,
         },
         drawId: latestDraw.id,
         wonAt: latestDraw.wonAt,

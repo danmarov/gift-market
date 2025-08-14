@@ -71,6 +71,8 @@ model Gift {
   name              String
   description       String?
   mediaUrl          String            @map("media_url")
+  revealAnimation   String?           @map("reveal_animation")
+  revealMediaId     String?           @map("reveal_media_id")   // в будущем для удаления
   price             Int
   quantity          Int
   soldCount         Int               @default(0) @map("sold_count")

@@ -8,10 +8,16 @@ import {
   UserOnboardingStatus,
   createPurchase as createPurchaseDb,
   markPurchaseAsSent,
+  processReferralOnboardingReward,
 } from "database";
 import { JWTSession } from "@/lib/types/session";
 import { withServerAuth } from "../auth/with-server-auth";
-import { isUserMemberOfChannel, notifyAdmin, sendGift } from "../bot";
+import {
+  isUserMemberOfChannel,
+  notifyAdmin,
+  sendGift,
+  sendMessageToUser,
+} from "../bot";
 
 export type ClaimGiftResult =
   | {
@@ -122,6 +128,62 @@ async function _claimGift(session: JWTSession): Promise<ClaimGiftResult> {
     console.log(
       "🎉 [SERVER] Gift successfully claimed and onboarding completed!"
     );
+
+    // Обрабатываем реферальную награду после завершения онбординга
+    try {
+      const referralReward = await processReferralOnboardingReward(
+        session.id,
+        5,
+        5
+      );
+
+      if (referralReward) {
+        console.log("💰 [SERVER] Referral rewards processed successfully!");
+
+        // Отправляем уведомление рефереру
+        const rewardStars = 5;
+        const notificationText = `<b>🎉 Новый реферал!</b>\nВы получили бонус в размере <b>${rewardStars} ⭐</b>.`;
+
+        try {
+          await sendMessageToUser(
+            referralReward.referrer.telegramId,
+            notificationText,
+            {
+              parseMode: "HTML",
+            }
+          );
+        } catch (notificationError) {
+          console.error(
+            "❌ [SERVER] Failed to send referral notification:",
+            notificationError
+          );
+        }
+
+        // Уведомляем админа
+        await notifyAdmin({
+          message: `
+🎉 <b>Реферальная система сработала!</b>
+
+👥 Реферер: ${referralReward.referrer.telegramId}
+👤 Новый пользователь: ${referralReward.referred.telegramId}
+💰 Награды начислены: ${rewardStars}⭐ каждому
+📅 Время: ${new Date().toLocaleString()}
+
+✅ Онбординг завершен, подарок получен
+          `,
+          keyboard: "webapp",
+          webappButtonText: "📈 Статистика",
+          webappUrl: `${process.env.WEBAPP_URL}/admin/referrals`,
+        });
+      } else {
+        console.log("ℹ️ [SERVER] No pending referral found for this user");
+      }
+    } catch (referralError) {
+      console.error(
+        "❌ [SERVER] Error processing referral reward:",
+        referralError
+      );
+    }
 
     // Создаем запись о "покупке" (бесплатной)
     const purchase = await createPurchaseDb({

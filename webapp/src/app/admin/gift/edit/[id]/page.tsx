@@ -1,3 +1,4 @@
+// page.tsx
 import EditPageWrapper from "@/components/features/admin/product/edit/edit-page-wrapper";
 import { findGift } from "@/lib/actions/gift/find-gift-by-id";
 import { editGift } from "@/lib/actions/admin/edit-gift";
@@ -21,30 +22,36 @@ export default async function EditGiftPage({ params }: EditGiftPageProps) {
   const handleEditGift = async (data: EditGiftFormData) => {
     "use server";
 
-    console.log("🔍 [SERVER] Received data:", data);
+    console.log("🔍 [SERVER] Received edit data:", {
+      ...data,
+      revealAnimationFile: data.revealAnimationFile
+        ? {
+            name: data.revealAnimationFile.name,
+            size: data.revealAnimationFile.size,
+            type: data.revealAnimationFile.type,
+          }
+        : null,
+    });
 
     const editData = {
       id: result.data.id,
       name: data.name,
       description: data.description,
-      telegramGiftId: data.telegramGiftId, // snake_case -> camelCase
-      mediaUrl: data.mediaUrl, // snake_case -> camelCase
+      telegramGiftId: data.telegramGiftId,
+      mediaUrl: data.mediaUrl,
+      revealAnimationFile: data.revealAnimationFile,
+      deleteRevealAnimation: data.deleteRevealAnimation,
       price: data.price,
       quantity: data.quantity,
-      backdropVariant: data.backdropVariant.toUpperCase() as "YELLOW" | "BLUE", // snake_case -> camelCase + uppercase
+      backdropVariant: data.backdropVariant,
       tags: data.tags,
-      specialOffer: data.specialOffer, // snake_case -> camelCase
+      specialOffer: data.specialOffer,
     };
 
-    console.log("🔍 [SERVER] Prepared editData:", editData);
-    console.log(
-      "🔍 [SERVER] backdrop_variant type:",
-      typeof editData.backdropVariant
-    );
-    console.log(
-      "🔍 [SERVER] backdrop_variant value:",
-      editData.backdropVariant
-    );
+    console.log("🔍 [SERVER] Prepared editData:", {
+      ...editData,
+      revealAnimationFile: editData.revealAnimationFile ? "File object" : null,
+    });
 
     return await editGift(editData);
   };

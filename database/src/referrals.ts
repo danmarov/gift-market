@@ -7,18 +7,91 @@ export interface CreateReferralData {
   reward?: number;
 }
 
-// Создать новый реферал
+export interface CreateReferralData {
+  referrerId: string;
+  referredId: string;
+  reward?: number;
+}
+
+// Создать новый реферал БЕЗ начисления награды
 export async function createReferral(data: CreateReferralData) {
   return prisma.referral.create({
     data: {
       referrerId: data.referrerId,
       referredId: data.referredId,
-      reward: data.reward ?? 10,
+      reward: 0, // 👈 КЛЮЧЕВОЕ: 0 = награда не начислена, >0 = начислена
     },
     include: {
       referrer: true,
       referred: true,
     },
+  });
+}
+
+// НОВАЯ ФУНКЦИЯ: Начислить награду за завершение онбординга
+export async function processReferralOnboardingReward(
+  referredUserId: string,
+  referrerReward = 5,
+  referredReward = 5
+) {
+  return prisma.$transaction(async (tx) => {
+    // Ищем незавершенный реферал для этого пользователя
+    const referral = await tx.referral.findUnique({
+      where: {
+        referredId: referredUserId,
+      },
+      include: {
+        referrer: true,
+        referred: true,
+      },
+    });
+
+    if (!referral) {
+      console.log(`🔍 No referral found for user ${referredUserId}`);
+      return null;
+    }
+
+    // Проверяем, не начислена ли уже награда (reward > 0)
+    if (referral.reward > 0) {
+      console.log(
+        `💰 Referral reward already processed for user ${referredUserId}`
+      );
+      return null;
+    }
+
+    console.log(
+      `💰 Processing referral reward: ${referral.referrerId} -> ${referredUserId}`
+    );
+
+    // Начисляем награду рефереру
+    await tx.user.update({
+      where: { id: referral.referrerId },
+      data: {
+        balance: { increment: referrerReward },
+      },
+    });
+
+    // Начисляем бонус новому пользователю
+    await tx.user.update({
+      where: { id: referredUserId },
+      data: {
+        balance: { increment: referredReward },
+      },
+    });
+
+    // Помечаем реферал как оплаченный, обновляя reward
+    const updatedReferral = await tx.referral.update({
+      where: { id: referral.id },
+      data: {
+        reward: referrerReward, // > 0 означает что награда начислена
+      },
+      include: {
+        referrer: true,
+        referred: true,
+      },
+    });
+
+    return updatedReferral;
   });
 }
 
@@ -67,43 +140,6 @@ export async function getUserReferralStats(userId: string) {
     totalReferrals,
     totalReward: totalReward._sum.reward || 0,
   };
-}
-
-// Начислить награду за реферала (обновить баланс + создать запись)
-export async function processReferralReward(
-  referrerId: string,
-  referredId: string,
-  referrerReward = 10,
-  referredReward = 5
-) {
-  return prisma.$transaction(async (tx) => {
-    // Создаем запись о реферале
-    const referral = await tx.referral.create({
-      data: {
-        referrerId,
-        referredId,
-        reward: referrerReward, // сохраняем награду реферера
-      },
-    });
-
-    // Начисляем награду рефереру
-    await tx.user.update({
-      where: { id: referrerId },
-      data: {
-        balance: { increment: referrerReward },
-      },
-    });
-
-    // Начисляем бонус новому пользователю
-    await tx.user.update({
-      where: { id: referredId },
-      data: {
-        balance: { increment: referredReward },
-      },
-    });
-
-    return referral;
-  });
 }
 
 // Проверить может ли пользователь быть рефералом (не существует ли уже)

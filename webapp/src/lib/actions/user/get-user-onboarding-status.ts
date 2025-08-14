@@ -1,7 +1,7 @@
 // lib/actions/user/get-user-onboarding-status.ts
 "use server";
 
-import { findUserById, getUserWonGift } from "database";
+import { findUserById, findUserByTelegramId, getUserWonGift } from "database";
 import { withServerAuth } from "../auth/with-server-auth";
 import { JWTSession } from "@/lib/types/session";
 import { UserOnboardingStatus } from "@/lib/types/user";
@@ -18,9 +18,10 @@ async function _getUserOnboardingStatus(session: JWTSession): Promise<{
     console.log("📋 [SERVER] Getting onboarding status for user:", session.id);
 
     // Получаем пользователя из БД
-    const user = await findUserById(session.id);
+    const user = await findUserByTelegramId(session.telegramId);
 
     if (!user) {
+      console.log("ID:", session.id);
       throw new Error("User not found");
     }
 

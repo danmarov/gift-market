@@ -6,12 +6,12 @@ import { hapticFeedback } from "@/lib/haptic-feedback";
 import { useRef, useState } from "react";
 
 interface GiftAnimationProps {
-  onGiftDrawRequest: () => void;
-  showCongrats?: boolean; // для управления затуханием
+  onAnimationComplete: () => void;
+  showCongrats?: boolean;
 }
 
 export default function GiftAnimation({
-  onGiftDrawRequest,
+  onAnimationComplete,
   showCongrats = false,
 }: GiftAnimationProps) {
   const playerRef = useRef<TGSPlayerRef>(null);
@@ -22,11 +22,11 @@ export default function GiftAnimation({
     if (hasClicked) return;
 
     setHasClicked(true);
-    console.log("🎁 Animation started - waiting 2 seconds before draw request");
+    console.log("🎁 Animation started - waiting 2 seconds before completion");
 
     setTimeout(() => {
-      console.log("⏰ 2 seconds passed - triggering draw request");
-      onGiftDrawRequest();
+      console.log("⏰ 2 seconds passed - triggering completion");
+      onAnimationComplete();
     }, 1800);
   };
 
@@ -53,7 +53,7 @@ export default function GiftAnimation({
             onClick={() => hapticFeedback("soft")}
             style={{
               cursor: hasClicked ? "default" : "pointer",
-              opacity: showCongrats ? 0 : 1, // плавное затухание когда показываем поздравления
+              opacity: showCongrats ? 0 : 1,
               transition: "opacity 0.3s ease-out",
             }}
             className="w-full h-fit"

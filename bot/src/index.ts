@@ -183,18 +183,17 @@ bot.command("start", async (ctx) => {
   const sendWelcomeMessage = async (greeting: string) => {
     const message = `<b>${greeting}, ${firstName}! 🎉</b>\n\n🎁 Лови подарки, зарабатывай звёзды и участвуй в розыгрышах`;
 
-    if (isProduction) {
-      await ctx.replyWithPhoto(welcomePhotoFileId, {
-        caption: message,
-        parse_mode: "HTML",
-        reply_markup: webappKb,
-      });
-    } else {
-      await ctx.reply(message, {
-        parse_mode: "HTML",
-        reply_markup: webappKb,
-      });
-    }
+    await ctx.replyWithPhoto(welcomePhotoFileId, {
+      caption: message,
+      parse_mode: "HTML",
+      reply_markup: webappKb,
+    });
+    // } else {
+    // await ctx.reply(message, {
+    //   parse_mode: "HTML",
+    //   reply_markup: webappKb,
+    // });
+    // }
   };
 
   if (existingUser) {
@@ -225,21 +224,24 @@ bot.command("start", async (ctx) => {
 
       if (newUser) {
         try {
-          // Обрабатываем реферальную награду
-          await database.processReferralReward(referrer.id, newUser.id, 5, 5);
+          await database.createReferral({
+            referrerId: referrer.id,
+            referredId: newUser.id,
+            reward: 0, // 👈 0 означает что награда еще не начислена
+          });
 
           console.log(
             `✅ Реферальная система сработала: ${referrer.telegramId} -> ${newUser.telegramId}`
           );
 
-          const rewardStars = 5;
+          // const rewardStars = 5;
 
-          const notificationText = `<b>🎉 Новый реферал!</b>\nВы получили боонус в размере <b>${rewardStars} ⭐</b>.`;
+          // const notificationText = `<b>🎉 Новый реферал!</b>\nВы получили боонус в размере <b>${rewardStars} ⭐</b>.`;
 
-          await bot.api.sendMessage(referrer.telegramId, notificationText, {
-            parse_mode: "HTML",
-            reply_markup: webappKb,
-          });
+          // await bot.api.sendMessage(referrer.telegramId, notificationText, {
+          //   parse_mode: "HTML",
+          //   reply_markup: webappKb,
+          // });
         } catch (error) {
           console.error("Ошибка при обработке реферала:", error);
         }

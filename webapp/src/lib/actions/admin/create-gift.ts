@@ -5,6 +5,7 @@ import { withServerAuth } from "../auth/with-server-auth";
 import { createGiftSchema, CreateGiftFormData } from "@/lib/types/gift";
 import { z } from "zod";
 import { createGift as createGiftDb } from "database";
+import { uploadToCloudinary, validateCloudinaryConfig } from "../cloudinary";
 
 export type CreateGiftResult =
   | { success: true; data: { id: string; message: string } }
@@ -14,19 +15,110 @@ async function _createGift(
   session: JWTSession,
   formData: CreateGiftFormData
 ): Promise<CreateGiftResult> {
-  console.log("🎁 [SERVER ACTION] Получены данные подарка:", formData);
+  console.log("🎁 [SERVER ACTION] Получены данные подарка:", {
+    ...formData,
+    reveal_animation_file: formData.reveal_animation_file
+      ? {
+          name: formData.reveal_animation_file.name,
+          size: formData.reveal_animation_file.size,
+          type: formData.reveal_animation_file.type,
+        }
+      : null,
+  });
 
   try {
+    // Проверяем конфигурацию Cloudinary если есть файл анимации
+    if (formData.reveal_animation_file && !validateCloudinaryConfig()) {
+      return {
+        success: false,
+        error: "Cloudinary не настроен. Проверьте переменные окружения.",
+      };
+    }
+
     // Валидация через zod
     console.log("🔍 [SERVER ACTION] Валидация данных...");
     const validatedData = createGiftSchema.parse(formData);
-    console.log("✅ [SERVER ACTION] Данные валидны:", validatedData);
+    console.log("✅ [SERVER ACTION] Данные валидны:", {
+      ...validatedData,
+      reveal_animation_file: validatedData.reveal_animation_file
+        ? "File object"
+        : null,
+    });
 
     const id = `${Date.now()}${Math.floor(Math.random() * 10000)
       .toString()
       .padStart(4, "0")}`;
 
     console.log("🆔 [SERVER ACTION] Сгенерирован id:", id);
+
+    // Обработка файла анимации разворота
+    let revealAnimationUrl = "";
+    let revealMediaId = "";
+
+    if (validatedData.reveal_animation_file) {
+      console.log("🎬 [SERVER ACTION] Обработка файла анимации разворота...");
+
+      // Валидация типа файла
+      const allowedTypes = ["image/gif", "video/mp4", "video/webm"];
+      const isTgs = validatedData.reveal_animation_file.name.endsWith(".tgs");
+
+      if (
+        !allowedTypes.includes(validatedData.reveal_animation_file.type) &&
+        !isTgs
+      ) {
+        return {
+          success: false,
+          error:
+            "Неподдерживаемый тип файла анимации. Разрешены только .tgs, .gif, .mp4, .webm",
+        };
+      }
+
+      // Проверка размера файла (максимум 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (validatedData.reveal_animation_file.size > maxSize) {
+        return {
+          success: false,
+          error: "Файл анимации слишком большой. Максимальный размер: 10MB",
+        };
+      }
+
+      try {
+        // Загружаем в Cloudinary
+        console.log("☁️ [SERVER ACTION] Загрузка анимации в Cloudinary...");
+        const uploadResult = await uploadToCloudinary(
+          validatedData.reveal_animation_file,
+          "gift-reveal-animations"
+        );
+
+        revealAnimationUrl = uploadResult.secureUrl;
+        revealMediaId = uploadResult.publicId;
+
+        console.log(
+          "✅ [SERVER ACTION] Файл анимации успешно загружен в Cloudinary:",
+          {
+            url: revealAnimationUrl,
+            publicId: revealMediaId,
+            size: uploadResult.bytes,
+            format: uploadResult.format,
+          }
+        );
+      } catch (uploadError) {
+        console.error(
+          "❌ [SERVER ACTION] Ошибка загрузки анимации в Cloudinary:",
+          uploadError
+        );
+        return {
+          success: false,
+          error: `Ошибка загрузки файла анимации: ${
+            uploadError instanceof Error
+              ? uploadError.message
+              : "Неизвестная ошибка"
+          }`,
+        };
+      }
+    } else {
+      console.log("⚠️ [SERVER ACTION] Файл анимации разворота не предоставлен");
+    }
 
     // Преобразование данных для БД
     const giftData = {
@@ -35,6 +127,8 @@ async function _createGift(
       name: validatedData.name,
       description: validatedData.description,
       mediaUrl: validatedData.media_url,
+      revealAnimation: revealAnimationUrl || null,
+      revealMediaId: revealMediaId || null,
       price: validatedData.price,
       quantity: validatedData.quantity,
       specialOffer: validatedData.special_offer,
@@ -53,13 +147,16 @@ async function _createGift(
       telegramGiftId: createdGift.telegramGiftId,
       name: createdGift.name,
       price: createdGift.price,
+      hasRevealAnimation: !!createdGift.revealAnimation,
     });
 
     return {
       success: true,
       data: {
         id: createdGift.id,
-        message: `Подарок "${createdGift.name}" успешно создан! ID: ${createdGift.telegramGiftId}`,
+        message: `Подарок "${createdGift.name}" успешно создан! ID: ${
+          createdGift.telegramGiftId
+        }${revealAnimationUrl ? " (с анимацией разворота)" : ""}`,
       },
     };
   } catch (error) {

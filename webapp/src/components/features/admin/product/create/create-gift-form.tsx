@@ -5,6 +5,7 @@ import Input from "@/components/ui/input";
 import MultiSelect from "@/components/ui/multi-select";
 import Select from "@/components/ui/select";
 import Textarea from "@/components/ui/textarea";
+import FileUpload from "@/components/ui/file-upload";
 import React, { forwardRef, useEffect, useImperativeHandle } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,6 +47,7 @@ const CreateGiftForm = forwardRef<CreateGiftFormRef, CreateGiftFormProps>(
         description: "",
         telegram_gift_id: undefined,
         media_url: "",
+        reveal_animation_file: null,
         price: 0,
         quantity: 1000000,
         backdrop_variant: "yellow",
@@ -70,9 +72,23 @@ const CreateGiftForm = forwardRef<CreateGiftFormRef, CreateGiftFormProps>(
       }
     }, [isValid, onValidationChange]);
 
+    const handleFormSubmit = (data: CreateGiftFormData) => {
+      console.log("📝 [FORM] Данные формы подарка:", {
+        ...data,
+        reveal_animation_file: data.reveal_animation_file
+          ? {
+              name: data.reveal_animation_file.name,
+              size: data.reveal_animation_file.size,
+              type: data.reveal_animation_file.type,
+            }
+          : null,
+      });
+      onSubmit(data);
+    };
+
     return (
       <div>
-        <form id="create-gift-form" onSubmit={handleSubmit(onSubmit)}>
+        <form id="create-gift-form" onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="flex flex-col gap-6">
             {/* Основная информация */}
             <div className="bg-white/5 rounded-2xl">
@@ -188,6 +204,22 @@ const CreateGiftForm = forwardRef<CreateGiftFormRef, CreateGiftFormProps>(
                       placeholder="Ссылка на изображение или tgs"
                       error={errors.media_url?.message}
                       {...field}
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="reveal_animation_file"
+                  control={control}
+                  render={({ field: { onChange, value } }) => (
+                    <FileUpload
+                      label="Анимация открытия"
+                      accept=".tgs"
+                      placeholder="Выберите TGS файл"
+                      error={errors.reveal_animation_file?.message}
+                      onChange={onChange}
+                      value={value || null}
+                      description="Поддерживается только формат .tgs"
                     />
                   )}
                 />

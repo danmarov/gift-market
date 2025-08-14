@@ -10,14 +10,14 @@ export default async function OnboardingPage() {
   const result = await getUserOnboardingStatus();
 
   if (!result.success || !result.data) {
-    return <>Oops.. {result.error}</>;
+    throw new Error(result.error);
   }
 
   if ((result.data.onboardingStatus as UserOnboardingStatus) === "COMPLETED") {
     redirect("/");
   }
   return (
-    <MainLayout bottomBar={<></>} disableBottomPadding>
+    <MainLayout disableBottomPadding>
       <OnboardingContent
         onboardingStatus={result.data.onboardingStatus as UserOnboardingStatus}
       />

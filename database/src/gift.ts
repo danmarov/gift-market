@@ -11,6 +11,8 @@ export interface CreateGiftData {
   quantity: number;
   specialOffer?: boolean;
   backdropVariant?: BackdropVariant;
+  revealMediaId?: string | null;
+  revealAnimation?: string | null;
   tags?: string[];
 }
 
@@ -22,6 +24,8 @@ export interface UpdateGiftData {
   quantity?: number;
   specialOffer?: boolean;
   backdropVariant?: BackdropVariant;
+  revealMediaId?: string | null;
+  revealAnimation?: string | null;
   tags?: string[];
 }
 
@@ -38,6 +42,8 @@ export async function createGift(data: CreateGiftData) {
       quantity: data.quantity,
       specialOffer: data.specialOffer ?? false,
       backdropVariant: data.backdropVariant ?? BackdropVariant.YELLOW,
+      revealAnimation: data.revealAnimation,
+      revealMediaId: data.revealMediaId,
       tags: data.tags ?? [],
       isDeleted: false, // явно указываем что подарок не удален
     },

@@ -102,10 +102,10 @@ async function validateUser(ctx: any, next: NextFunction) {
   }
 
   // Проверяем наличие username
-  if (!telegramUser.username || telegramUser.username.trim() === "") {
-    await ctx.reply("пишет привет тебе чувак");
-    return;
-  }
+  // if (!telegramUser.username || telegramUser.username.trim() === "") {
+  //   await ctx.reply("пишет привет тебе чувак");
+  //   return;
+  // }
 
   // Функция для проверки подозрительного контента
   const containsSuspiciousContent = (text: string | undefined): boolean => {

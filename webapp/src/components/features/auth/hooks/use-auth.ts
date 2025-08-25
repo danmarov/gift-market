@@ -81,7 +81,10 @@ export function useAuth() {
     }
 
     // Если онбординг не завершен
-    if (user.onboardingStatus !== "COMPLETED") {
+    if (
+      user.onboardingStatus !== "COMPLETED" &&
+      user.onboardingStatus !== "CHANNELS_COMPLETED"
+    ) {
       if (!isNavigating) {
         setIsNavigating(true);
         router.push("/onboarding");

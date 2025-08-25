@@ -13,9 +13,11 @@ enum UserRole {
 }
 
 enum UserOnboardingStatus {
-  NEW              // впервые зашел, показываем онбординг
-  GIFT_REVEALED    // выиграл подарок, но не получил
-  COMPLETED        // получил подарок, онбординг завершен
+  NEW                 // впервые зашел
+  GIFT_REVEALED       // выиграл подарок
+  CHANNELS_COMPLETED  // подписался на каналы, может пропустить
+  ALL_COMPLETED       // подписался на каналы, и пригласил друзей
+  COMPLETED           // получил подарок полностью
 }
 
 enum BackdropVariant {
@@ -52,19 +54,19 @@ model User {
 
 model Referral {
   id            String   @id @default(cuid())
-  referrerId    String   @map("referrer_id")
-  referredId    String   @unique @map("referred_id") // уникальный, т.к. пользователь может быть приглашен только один раз
-  reward        Int      @default(10) // сколько дали за этого реферала
+  referrerId    String   
+  referredId    String   @unique 
+  reward        Int      @default(0)  // 0 = не начислен, 5 = начислен
   
-  createdAt     DateTime @default(now()) @map("created_at")
+  // ⭐ НОВЫЕ ПОЛЯ:
+  isValidated   Boolean  @default(false) @map("is_validated")  // подписался ли на каналы
+  validatedAt   DateTime? @map("validated_at")                 // когда подписался
   
-  // Связи
-  referrer      User     @relation("UserReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
-  referred      User     @relation("UserReferredBy", fields: [referredId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
   
-  @@map("referrals")
+  referrer      User     @relation("UserReferrals", fields: [referrerId], references: [id])
+  referred      User     @relation("UserReferredBy", fields: [referredId], references: [id])
 }
-
 model Gift {
   id                String            @id 
   telegramGiftId    String?           @map("telegram_gift_id")  

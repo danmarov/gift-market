@@ -10,6 +10,8 @@ export const USER_ONBOARDING_STATUS_VALUES = [
   "NEW",
   "GIFT_REVEALED",
   "COMPLETED",
+  "ALL_COMPLETED",
+  "CHANNELS_COMPLETED",
 ] as const;
 export type UserOnboardingStatus =
   (typeof USER_ONBOARDING_STATUS_VALUES)[number];

@@ -183,16 +183,16 @@ bot.command("start", async (ctx) => {
   const sendWelcomeMessage = async (greeting: string) => {
     const message = `<b>${greeting}, ${firstName}! 🎉</b>\n\n🎁 Лови подарки, зарабатывай звёзды и участвуй в розыгрышах`;
 
-    await ctx.replyWithPhoto(welcomePhotoFileId, {
-      caption: message,
-      parse_mode: "HTML",
-      reply_markup: webappKb,
-    });
-    // } else {
-    // await ctx.reply(message, {
+    // await ctx.replyWithPhoto(welcomePhotoFileId, {
+    //   caption: message,
     //   parse_mode: "HTML",
     //   reply_markup: webappKb,
     // });
+    // } else {
+    await ctx.reply(message, {
+      parse_mode: "HTML",
+      reply_markup: webappKb,
+    });
     // }
   };
 

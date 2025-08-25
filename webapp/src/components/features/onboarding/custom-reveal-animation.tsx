@@ -3,9 +3,14 @@
 import TGSPlayer from "@/components/ui/tgs-wrapper";
 import { hapticFeedback } from "@/lib/haptic-feedback";
 import Image from "next/image";
-import { useState, useRef } from "react";
+import { useState, useRef, useTransition } from "react";
 import { TGSPlayerRef } from "@/components/ui/tgs-wrapper";
 import SubscriptionDrawer from "./drawer";
+import { completeOnboarding } from "@/lib/actions/onboarding/complete-onboarding";
+import showToast from "@/components/ui/custom-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { AUTH_QUERY_KEY } from "../auth/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 interface CustomRevealAnimationProps {
   revealAnimation: string;
@@ -22,8 +27,11 @@ export default function CustomRevealAnimation({
 }: CustomRevealAnimationProps) {
   const [isVisible, setIsVisible] = useState(skipAnimation);
   const [hasClicked, setHasClicked] = useState(skipAnimation);
+  const [isClaimingGift, setIsClaimingGift] = useState(false);
+  const queryClient = useQueryClient();
   const playerRef = useRef<TGSPlayerRef>(null);
-
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const handleClick = () => {
     if (!hasClicked && !skipAnimation) {
       hapticFeedback("soft");
@@ -63,6 +71,47 @@ export default function CustomRevealAnimation({
         }
       }, 50);
     }
+  };
+
+  const handleClaimGift = async () => {
+    if (isClaimingGift || isPending) return;
+
+    setIsClaimingGift(true);
+
+    hapticFeedback("soft");
+
+    startTransition(async () => {
+      try {
+        console.log("🎁 Claiming gift...");
+
+        const result = await completeOnboarding();
+
+        if (result.success) {
+          // setClaimMessage(result.message);
+          hapticFeedback("success");
+          console.log("✅ Gift claimed successfully:", result.message);
+          showToast.success(result.message);
+          await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+          router.push("/");
+        } else {
+          // setClaimError(result.error);
+          showToast.error(result.error);
+
+          hapticFeedback("error");
+          console.error("❌ Failed to claim gift:", result.error);
+        }
+      } catch (error) {
+        console.error("💥 Error claiming gift:", error);
+        // setClaimError(
+        //   "Произошла ошибка при получении подарка. Попробуйте ещё раз."
+        // );
+        showToast.error("Произошла ошибка");
+
+        hapticFeedback("error");
+      } finally {
+        setIsClaimingGift(false);
+      }
+    });
   };
 
   return (
@@ -136,7 +185,7 @@ export default function CustomRevealAnimation({
       </div>
 
       <p
-        className="font-serif congrats-description  mb-3"
+        className="font-serif congrats-description mb-3"
         style={{
           opacity: isVisible ? 1 : 0,
           transition: "opacity 0.3s ease-out",
@@ -154,18 +203,20 @@ export default function CustomRevealAnimation({
         }}
         className="w-full mt-2"
       >
-        <SubscriptionDrawer
-          trigger={
-            <button
-              onClick={() => {
-                hapticFeedback("soft");
-              }}
-              className="w-full primary-btn text-[#6E296D] text-nowrap"
-            >
-              Забрать подарок
-            </button>
-          }
-        />
+        <button
+          onClick={handleClaimGift}
+          disabled={isClaimingGift || isPending}
+          className="w-full primary-btn text-[#6E296D] text-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isClaimingGift || isPending ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="animate-spin">⏳</span>
+              Получение подарка...
+            </span>
+          ) : (
+            "Забрать подарок"
+          )}
+        </button>
       </div>
     </div>
   );

@@ -8,30 +8,61 @@ import { cn } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { openLink, openTelegramLink } from "@telegram-apps/sdk-react";
 import { useRouter } from "next/navigation";
-import React, { cloneElement, useState, isValidElement } from "react";
+import React, {
+  cloneElement,
+  useState,
+  isValidElement,
+  useEffect,
+} from "react";
 import Drawer from "react-modern-drawer";
-import { AUTH_QUERY_KEY } from "../auth/hooks/use-auth";
+import { AUTH_QUERY_KEY, useAuth } from "../auth/hooks/use-auth";
+import { ExternalLink, PersonStanding, Share2 } from "lucide-react";
+import { shareRefferalLink } from "@/lib/utils/share-refferal-link";
+import { validateRefferal } from "@/lib/actions/user/validate-refferal";
 
 interface SubscriptionDrawerProps {
-  trigger: React.ReactElement;
+  trigger?: React.ReactElement; // Делаем опциональным
+  isOpen?: boolean; // Контролируемое состояние
+  onOpenChange?: (isOpen: boolean) => void; // Callback для изменения состояния
 }
 
-const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({ trigger }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({
+  trigger,
+  isOpen: controlledIsOpen,
+  onOpenChange,
+}) => {
+  const { user } = useAuth();
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const { isMobile } = useDevice();
   const router = useRouter();
   const [isVerifying, setIsVerifying] = useState(false);
   const queryClient = useQueryClient();
+
   const { data, isLoading } = useQuery({
     queryKey: ["drawer-tasks"],
     queryFn: getActiveLootBoxTasks,
   });
 
-  const toggleDrawer = () => {
-    setIsOpen((prevState) => !prevState);
+  // Определяем какое состояние использовать: контролируемое или внутреннее
+  const isControlled = controlledIsOpen !== undefined;
+  const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
+  const handleShare = () => {
+    shareRefferalLink(user?.telegramId);
   };
+  const setIsOpen = (newIsOpen: boolean) => {
+    if (isControlled) {
+      onOpenChange?.(newIsOpen);
+    } else {
+      setInternalIsOpen(newIsOpen);
+    }
+  };
+
+  const toggleDrawer = () => {
+    setIsOpen(!isOpen);
+  };
+
   const renderTrigger = () => {
-    if (!isValidElement(trigger)) return null;
+    if (!trigger || !isValidElement(trigger)) return null;
 
     const triggerElement = trigger as React.ReactElement<
       React.ButtonHTMLAttributes<HTMLButtonElement>
@@ -86,17 +117,17 @@ const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({ trigger }) => {
     };
   };
 
-  if (!data && isLoading) {
-    return <>{renderTrigger()}</>;
+  // Если нет данных и загрузка - показываем только trigger (если есть)
+  if (isLoading && !data) {
+    return trigger ? renderTrigger() : null;
   }
 
   // Показываем ошибку от сервера с подробностями
   if (data && !data.success) {
     return (
       <>
-        <button onClick={toggleDrawer}>Show</button>
+        {trigger && renderTrigger()}
         <div>Server Error: {data.error || "Unknown error"}</div>
-        <div>Full data: {JSON.stringify(data)}</div>
       </>
     );
   }
@@ -104,15 +135,16 @@ const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({ trigger }) => {
   if (!data?.data) {
     return (
       <>
-        <button onClick={toggleDrawer}>Show</button>
+        {trigger && renderTrigger()}
         <div>No data received: {JSON.stringify(data)}</div>
       </>
     );
   }
 
-  const { drawerSize, tasksHeight } = getDrawerSizes(data.data.length);
+  const { drawerSize, tasksHeight } = getDrawerSizes(data.data.tasks.length);
 
   const onTaskClick = (url: string) => {
+    validateRefferal();
     if (!isMobile) {
       return openLink(url);
     }
@@ -130,29 +162,50 @@ const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({ trigger }) => {
       const result = await claimGift();
 
       if (result.success) {
-        await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
-
-        showToast.success("Ваш подарок уже в пути!");
-        hapticFeedback("success");
-        router.push("/");
+        // await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+        // setIsOpen(false);
+        // showToast.success(result.message); // Показываем сообщение об успехе из result
+        // hapticFeedback("success");
+        // router.push("/");
       } else {
-        showToast.error("Подпишитесь на все каналы");
+        // Если есть missingSubscriptions, формируем сообщение о неподписанных каналах
+        if (
+          result.missingSubscriptions &&
+          result.missingSubscriptions.length > 0
+        ) {
+          const channels = result.missingSubscriptions.join(", ");
+          showToast.error(`Подпишитесь на все каналы`);
+        } else {
+          // Показываем конкретную ошибку из result.error
+          showToast.error(result.error);
+        }
         hapticFeedback("error");
       }
     } catch (error) {
-      showToast.error("Произошла ошибка при получении подарка");
+      // Обработка непредвиденных ошибок (например, сетевые сбои)
+      showToast.error(
+        error instanceof Error
+          ? error.message
+          : "Произошла ошибка при получении подарка"
+      );
       hapticFeedback("error");
     } finally {
       setIsVerifying(false);
     }
   };
 
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+
   return (
     <>
-      {renderTrigger()}
+      {/* Показываем trigger только если он передан */}
+      {trigger && renderTrigger()}
+
       <Drawer
         open={isOpen}
-        onClose={toggleDrawer}
+        onClose={handleClose}
         direction="bottom"
         className="drawer"
         key={"subscription-drawer"}
@@ -170,13 +223,14 @@ const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({ trigger }) => {
       >
         <div className="inset-0 relative">
           <h1 className="subscribtion-title font-mono text-left">
-            Подпишитесь на каналы
+            Выполните задания
           </h1>
           <p className="subscription-p mt-1 text-left">
-            Для того чтобы забрать подарок, сначала подпишитесь на наши каналы.
+            Для того чтобы забрать подарок, сначала подпишитесь на наши каналы и
+            пригласите 2 друзей.
           </p>
-          <p className="subscription-p mt-5 text-left">Каналы для подписок </p>
-          <button className="absolute top-0 right-0" onClick={toggleDrawer}>
+          <p className="subscription-p mt-5 text-left">Список заданий </p>
+          <button className="absolute top-0 right-0" onClick={handleClose}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
@@ -202,11 +256,34 @@ const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({ trigger }) => {
             </svg>
           </button>
         </div>
+
         <div
           className="mt-2 flex flex-col gap-2 overflow-auto"
           style={{ height: `${tasksHeight}px` }}
         >
-          {data.data.map((item, i) => (
+          <div
+            // key={i}
+            className={cn("task-card-backdrop")}
+            role="button"
+            onClick={handleShare}
+          >
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <span className="task-card-icon flex-shrink-0">
+                  <Share2 size={18} className="text-white" />
+                </span>
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-mono text-sm font-medium text-white text-left">
+                    Пригласите друзей
+                  </span>
+                </div>
+              </div>
+              <div className="flex-shrink-0 ml-auto text-[#e7d2e9] font-medium text-sm">
+                {data.data.referals}/2
+              </div>
+            </div>
+          </div>
+          {data.data.tasks.map((item, i) => (
             <div
               key={i}
               className={cn("task-card-backdrop")}
@@ -253,7 +330,7 @@ const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({ trigger }) => {
                     fill="none"
                   >
                     <path
-                      d="M21.1933 9.08407L17.6458 5.49991C17.5606 5.41399 17.4592 5.3458 17.3475 5.29926C17.2358 5.25272 17.116 5.22876 16.995 5.22876C16.874 5.22876 16.7542 5.25272 16.6425 5.29926C16.5308 5.3458 16.4294 5.41399 16.3442 5.49991C16.1734 5.67166 16.0776 5.90399 16.0776 6.14616C16.0776 6.38833 16.1734 6.62066 16.3442 6.79241L19.6075 10.0832H0.916667C0.673552 10.0832 0.440394 10.1798 0.268485 10.3517C0.0965771 10.5236 0 10.7568 0 10.9999C0 11.243 0.0965771 11.4762 0.268485 11.6481C0.440394 11.82 0.673552 11.9166 0.916667 11.9166H19.6625L16.3442 15.2257C16.2583 15.311 16.1901 15.4123 16.1435 15.524C16.097 15.6358 16.073 15.7556 16.073 15.8766C16.073 15.9976 16.097 16.1174 16.1435 16.2291C16.1901 16.3408 16.2583 16.4422 16.3442 16.5274C16.4294 16.6133 16.5308 16.6815 16.6425 16.7281C16.7542 16.7746 16.874 16.7986 16.995 16.7986C17.116 16.7986 17.2358 16.7746 17.3475 16.7281C17.4592 16.6815 17.5606 16.6133 17.6458 16.5274L21.1933 12.9707C21.7083 12.4551 21.9976 11.7562 21.9976 11.0274C21.9976 10.2987 21.7083 9.5997 21.1933 9.08407Z"
+                      d="M21.1933 9.08407L17.6458 5.49991C17.5606 5.41399 17.4592 5.3458 17.3475 5.29926C17.2358 5.25272 17.116 5.22876 16.995 5.22876C16.874 5.22876 16.7542 5.25272 16.6425 5.29926C16.5308 5.3458 16.4294 5.41399 16.3442 5.49991C16.1734 5.67166 16.0776 5.90399 16.0776 6.14616C16.0776 6.38833 16.1734 6.62066 16.3442 6.79241L19.6075 10.0832H0.916667C0.673552 10.0832 0.440394 10.1798 0.268485 10.3517C0.0965771 10.5236 0 10.7568 0 10.9999C0 11.243 0.0965771 11.4762 0.268485 11.6481C0.440394 11.82 0.673552 11.9166 0.916667 11.9166H19.6625L16.3442 15.2257C16.2583 15.311 16.1901 15.4123 16.1435 15.524C16.097 15.6358 16.073 15.7556 16.073 15.8766C16.073 15.9976 16.097 16.1174 16.1435 16.2291C16.1901 16.3408 16.2583 16.4422 16.3442 16.5274C16.4294 16.6133 16.5308 16.6815 16.6425 16.7281C16.7542 16.7746 16.874 16.7986 16.995 16.7986C17.116 16.7986 17.2358 16.7746 17.3475 16.7281C16.4592 16.6815 17.5606 16.6133 17.6458 16.5274L21.1933 12.9707C21.7083 12.4551 21.9976 11.7562 21.9976 11.0274C21.9976 10.2987 21.7083 9.5997 21.1933 9.08407Z"
                       fill="white"
                     />
                   </svg>
@@ -262,11 +339,12 @@ const SubscriptionDrawer: React.FC<SubscriptionDrawerProps> = ({ trigger }) => {
             </div>
           ))}
         </div>
+
         <div className="flex items-center gap-2.5 mt-2.5">
           <button
             className="subscription-secondary font-mono"
             disabled={isVerifying}
-            onClick={toggleDrawer}
+            onClick={handleClose}
           >
             Закрыть
           </button>
